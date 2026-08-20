@@ -109,9 +109,20 @@ def global_css(theme: str) -> str:
     [data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"] {{ display: none !important; }}
     .stApp, .stMarkdown, p, span, label {{ color: {p['text_primary']}; }}
 
+    /* o cabecalho nativo do Streamlit usa z-index altissimo (~999990) e fica ancorado no
+       topo da pagina mesmo escondido visualmente - avisos/toasts de conexao que ele mostra
+       ocasionalmente podem competir pelo clique bem na regiao onde nossa barra de controles
+       fica (perto do topo). Garantimos que nossa barra sempre vence essa disputa. */
+    [data-testid="stHeader"] {{ pointer-events: none !important; }}
+    [data-testid="stHeader"] * {{ pointer-events: none !important; }}
+
     /* ---- barra de controles do topo (discreta) ---- */
     .topbar-anchor {{ display: none; }}
-    .st-key-topbar {{ margin-bottom: 2px; }}
+    .st-key-topbar {{
+        margin-bottom: 2px;
+        position: relative;
+        z-index: 1000000;
+    }}
     .st-key-topbar [data-testid="stHorizontalBlock"] {{
         gap: 8px;
         align-items: center;
