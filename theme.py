@@ -309,8 +309,11 @@ def global_css(theme: str) -> str:
         position: relative; z-index: 1;
     }}
 
-    /* ---- tabs ---- */
-    .stTabs [data-baseweb="tab-list"] {{
+    /* ---- tabs ----
+       o Streamlit trocou a estrutura interna das abas (nao usa mais data-baseweb) -
+       os seletores agora miram role="tab"/"tablist", que sao estaveis (vem do padrao
+       de acessibilidade ARIA, nao mudam entre versoes do componente). */
+    .stTabs [role="tablist"] {{
         gap: 5px;
         background: {p['card']};
         border: 1px solid {p['border']};
@@ -319,24 +322,30 @@ def global_css(theme: str) -> str:
         backdrop-filter: blur(18px);
         width: fit-content;
     }}
-    .stTabs [data-baseweb="tab"] {{
+    .stTabs [role="tab"] {{
         height: 40px;
         border-radius: 9px;
         color: {p['text_secondary']};
         font-weight: 700;
         font-size: 13px;
         letter-spacing: 0.02em;
-        padding: 0 18px;
+        padding: 0 26px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         transition: color 180ms ease, background 180ms ease;
     }}
-    .stTabs [data-baseweb="tab"]:hover {{ color: {p['text_primary']}; }}
-    .stTabs [aria-selected="true"] {{
+    .stTabs [role="tab"] p {{
+        padding: 0 2px;
+        white-space: nowrap;
+    }}
+    .stTabs [role="tab"]:hover {{ color: {p['text_primary']}; }}
+    .stTabs [role="tab"][aria-selected="true"] {{
         background: linear-gradient(118deg, {p['accent_1']}, {p['accent_2']});
         color: #ffffff !important;
         box-shadow: 0 6px 20px -7px {p['glow_blue']};
     }}
-    .stTabs [data-baseweb="tab-highlight"], .stTabs [data-baseweb="tab-border"] {{ display: none; }}
-    .stTabs [data-baseweb="tab-panel"] {{ padding-top: clamp(4px, 1vh, 10px); }}
+    .stTabs [role="tabpanel"] {{ padding-top: clamp(4px, 1vh, 10px); }}
 
     /* ---- chart shell ---- */
     .chart-shell {{
