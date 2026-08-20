@@ -68,17 +68,17 @@ def global_css(theme: str) -> str:
         font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
     }}
 
-    /* ---- compacta o layout: cabe tudo em uma tela ---- */
+    /* ---- compacta o layout: cabe tudo em uma tela, mesmo com barra de favoritos ocupando espaco ---- */
     [data-testid="stMainBlockContainer"] {{
-        padding-top: 1.6rem;
-        padding-bottom: 0.6rem;
-        padding-left: 2.6rem;
-        padding-right: 2.6rem;
+        padding-top: clamp(0.6rem, 2vh, 1.2rem);
+        padding-bottom: clamp(0.3rem, 1vh, 0.6rem);
+        padding-left: clamp(1rem, 3vw, 2.6rem);
+        padding-right: clamp(1rem, 3vw, 2.6rem);
         max-width: 100%;
         position: relative;
         z-index: 1;
     }}
-    [data-testid="stVerticalBlock"] {{ gap: 0.6rem; }}
+    [data-testid="stVerticalBlock"] {{ gap: 0.4rem; }}
     [data-testid="stToolbar"], [data-testid="stDecoration"], footer {{ display: none !important; }}
     [data-testid="stHeader"] {{ background: transparent; height: 0; }}
 
@@ -170,8 +170,8 @@ def global_css(theme: str) -> str:
         gap: 20px;
         flex-wrap: wrap;
         border-bottom: 1px solid {p['border']};
-        padding-bottom: 14px;
-        margin-bottom: 16px;
+        padding-bottom: clamp(6px, 1.4vh, 14px);
+        margin-bottom: clamp(6px, 1.4vh, 14px);
     }}
     .kicker {{
         display: inline-flex;
@@ -198,7 +198,7 @@ def global_css(theme: str) -> str:
         100% {{ box-shadow: 0 0 0 0 rgba(0,0,0,0); }}
     }}
     .hero-title {{
-        font-size: clamp(30px, 3.6vw, 52px);
+        font-size: clamp(24px, 3vw, 48px);
         font-weight: 900;
         line-height: 0.98;
         letter-spacing: -0.035em;
@@ -221,8 +221,8 @@ def global_css(theme: str) -> str:
     .kpi-grid {{
         display: grid;
         grid-template-columns: repeat(6, 1fr);
-        gap: 12px;
-        margin-bottom: 14px;
+        gap: 10px;
+        margin-bottom: clamp(6px, 1.4vh, 14px);
     }}
     @media (max-width: 1400px) {{ .kpi-grid {{ grid-template-columns: repeat(3, 1fr); }} }}
     @media (max-width: 760px)  {{ .kpi-grid {{ grid-template-columns: repeat(2, 1fr); }} }}
@@ -233,7 +233,7 @@ def global_css(theme: str) -> str:
         -webkit-backdrop-filter: blur(18px);
         border: 1px solid {p['border']};
         border-radius: 16px;
-        padding: 15px 16px 16px 16px;
+        padding: clamp(10px, 1.6vh, 15px) 14px clamp(10px, 1.6vh, 15px) 14px;
         position: relative;
         overflow: hidden;
         transition: transform 240ms cubic-bezier(.2,.8,.2,1), box-shadow 240ms ease, border-color 240ms ease, background 240ms ease;
@@ -267,11 +267,11 @@ def global_css(theme: str) -> str:
         font-weight: 800;
         letter-spacing: 0.13em;
         text-transform: uppercase;
-        margin-bottom: 9px;
+        margin-bottom: clamp(4px, 1vh, 9px);
         position: relative; z-index: 1;
     }}
     .kpi-value {{
-        font-size: clamp(20px, 1.75vw, 30px);
+        font-size: clamp(18px, 1.6vw, 27px);
         font-weight: 900;
         font-variant-numeric: tabular-nums;
         line-height: 1;
@@ -291,7 +291,7 @@ def global_css(theme: str) -> str:
         width: fit-content;
     }}
     .stTabs [data-baseweb="tab"] {{
-        height: 36px;
+        height: 32px;
         border-radius: 9px;
         color: {p['text_secondary']};
         font-weight: 700;
@@ -307,7 +307,7 @@ def global_css(theme: str) -> str:
         box-shadow: 0 6px 20px -7px {p['glow_blue']};
     }}
     .stTabs [data-baseweb="tab-highlight"], .stTabs [data-baseweb="tab-border"] {{ display: none; }}
-    .stTabs [data-baseweb="tab-panel"] {{ padding-top: 12px; }}
+    .stTabs [data-baseweb="tab-panel"] {{ padding-top: clamp(4px, 1vh, 10px); }}
 
     /* ---- chart shell ---- */
     .chart-shell {{
@@ -324,7 +324,7 @@ def global_css(theme: str) -> str:
         justify-content: space-between;
         gap: 16px;
         flex-wrap: wrap;
-        padding: 13px 18px 9px 18px;
+        padding: clamp(8px, 1.4vh, 13px) 18px clamp(5px, 1vh, 9px) 18px;
     }}
     .chart-title {{
         color: {p['text_primary']};
@@ -413,5 +413,12 @@ def global_css(theme: str) -> str:
     }}
 
     iframe {{ display: block; }}
+    /* graficos: altura acompanha a janela em vez do atributo height fixo passado ao
+       components.html - evita rolagem quando a barra de favoritos/abas reduz a tela.
+       (a div .chart-shell nao chega a envolver o iframe no DOM real, entao miramos
+       direto no container que o Streamlit usa para todo st.components.v1.html) */
+    [data-testid="stTabPanel"] [data-testid="stIFrame"] {{
+        height: clamp(230px, 40vh, 352px) !important;
+    }}
     </style>
     """

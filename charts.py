@@ -6,8 +6,10 @@ from theme import get_palette
 ECHARTS_CDN = "https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"
 
 
-def _base_style(height: int) -> str:
-    return f"width:100%;height:{height}px;"
+def _frame_reset() -> str:
+    """O iframe herda a altura definida via CSS pelo tema (responsiva a vh); aqui garantimos
+    que a arvore html/body/wrap dentro dele ocupe 100% dessa altura, em vez de um px fixo."""
+    return "<style>html,body{margin:0;height:100%;overflow:hidden;}</style>"
 
 
 def trend_and_conversions(dates: list[str], gasto: list[float], conversoes: list[int], theme: str) -> str:
@@ -15,9 +17,10 @@ def trend_and_conversions(dates: list[str], gasto: list[float], conversoes: list
     p = get_palette(theme)
 
     return f"""
-    <div id="wrap-trend" style="{_base_style(344)}">
-      <div id="chart-gasto" style="width:100%;height:224px;"></div>
-      <div id="chart-conv" style="width:100%;height:118px;"></div>
+    {_frame_reset()}
+    <div id="wrap-trend" style="width:100%;height:100%;display:flex;flex-direction:column;">
+      <div id="chart-gasto" style="width:100%;flex:0 0 65%;"></div>
+      <div id="chart-conv" style="width:100%;flex:0 0 35%;"></div>
     </div>
     <script src="{ECHARTS_CDN}"></script>
     <script>
@@ -143,7 +146,8 @@ def funnel_chart(impressoes: int, cliques: int, conversoes: int, theme: str) -> 
     ]
 
     return f"""
-    <div id="chart-funnel" style="{_base_style(344)}"></div>
+    {_frame_reset()}
+    <div id="chart-funnel" style="width:100%;height:100%;"></div>
     <script src="{ECHARTS_CDN}"></script>
     <script>
     (function() {{
@@ -202,7 +206,8 @@ def campaign_bar_chart(campanhas: list[str], gastos: list[float], cpas: list[flo
     cores = [p["good"] if c <= cpa_medio else p["critical"] for c in cpa_vals]
 
     return f"""
-    <div id="chart-campanhas" style="{_base_style(344)}"></div>
+    {_frame_reset()}
+    <div id="chart-campanhas" style="width:100%;height:100%;"></div>
     <script src="{ECHARTS_CDN}"></script>
     <script>
     (function() {{
