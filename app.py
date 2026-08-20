@@ -356,8 +356,10 @@ def _controles(theme: str):
     with col_datas:
         if periodo == "Personalizado":
             with st.popover("Datas", use_container_width=True):
-                data_ini = st.date_input("De", dt.date.today() - dt.timedelta(days=30), key="dt_ini")
-                data_fim = st.date_input("Até", dt.date.today(), key="dt_fim")
+                data_ini = st.date_input(
+                    "De", dt.date.today() - dt.timedelta(days=30), key="dt_ini", format="DD/MM/YYYY"
+                )
+                data_fim = st.date_input("Até", dt.date.today(), key="dt_fim", format="DD/MM/YYYY")
         else:
             data_ini, data_fim = calcular_intervalo(periodo)
 
