@@ -1,4 +1,6 @@
+import base64
 import datetime as dt
+from pathlib import Path
 
 import pandas as pd
 import streamlit as st
@@ -8,6 +10,19 @@ from charts import campaign_bar_chart, funnel_chart, trend_and_conversions
 from meta_api import MetaAPIError, buscar_alcance_exato, buscar_insights, listar_contas
 from mock_data import gerar_dados_diarios
 from theme import get_palette, global_css
+
+ASSETS_DIR = Path(__file__).parent / "assets"
+
+
+@st.cache_data(show_spinner=False)
+def logo_data_uri(theme: str) -> str:
+    """Selinho da agencia no cabecalho - amarelo no tema escuro, preto no tema claro."""
+    nome_arquivo = "logo-vanti-amarelo.png" if theme == "dark" else "logo-vanti-preto.png"
+    caminho = ASSETS_DIR / nome_arquivo
+    if not caminho.exists():
+        return ""
+    dados = base64.b64encode(caminho.read_bytes()).decode()
+    return f"data:image/png;base64,{dados}"
 
 st.set_page_config(
     page_title="Dashboard Meta Ads",
@@ -409,11 +424,13 @@ def main():
         st.stop()
 
     periodo_label = f"{data_ini.strftime('%d/%m/%Y')} — {data_fim.strftime('%d/%m/%Y')}"
+    logo_src = logo_data_uri(theme)
+    logo_html = f'<img src="{logo_src}" alt="Vanti Marketing Criativo" class="hero-logo">' if logo_src else ""
     st.markdown(
         f'<div class="hero-row"><div>'
         f'<div class="kicker">Meta Ads · Relatório de campanha</div>'
         f'<div class="hero-title">Painel de Performance</div>'
-        f'</div><div class="hero-meta">{fonte}<br/>Período <b>{periodo_label}</b></div></div>',
+        f'</div><div class="hero-meta">{logo_html}{fonte}<br/>Período <b>{periodo_label}</b></div></div>',
         unsafe_allow_html=True,
     )
 

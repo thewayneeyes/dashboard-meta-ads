@@ -245,6 +245,13 @@ def global_css(theme: str) -> str:
         line-height: 1.7;
     }}
     .hero-meta b {{ color: {p['text_primary']}; font-weight: 700; }}
+    .hero-logo {{
+        display: block;
+        height: 22px;
+        width: auto;
+        margin: 0 0 10px auto;
+        opacity: 0.92;
+    }}
 
     /* ---- KPI row ---- */
     .kpi-grid {{
