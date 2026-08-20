@@ -7,7 +7,25 @@ from urllib3.util.retry import Retry
 GRAPH_API_VERSION = "v21.0"
 BASE_URL = f"https://graph.facebook.com/{GRAPH_API_VERSION}"
 
-FIELDS = "campaign_name,spend,impressions,reach,clicks,ctr,cpc,cpm,actions,optimization_goal,date_start,date_stop"
+FIELDS = "campaign_id,campaign_name,spend,impressions,reach,clicks,ctr,cpc,cpm,actions,optimization_goal,date_start,date_stop"
+
+# "Veiculacao" no Gerenciador de Anuncios = effective_status da campanha. So existe no
+# endpoint de campanhas (/campaigns), nao no de insights - por isso precisa de uma
+# segunda consulta separada, unida pelo campaign_id.
+STATUS_PT = {
+    "ACTIVE": "Ativo",
+    "PAUSED": "Pausado",
+    "CAMPAIGN_PAUSED": "Pausado",
+    "ADSET_PAUSED": "Pausado",
+    "IN_PROCESS": "Em processamento",
+    "WITH_ISSUES": "Com problema",
+    "PENDING_REVIEW": "Em revisão",
+    "DISAPPROVED": "Reprovado",
+    "PREAPPROVED": "Pré-aprovado",
+    "PENDING_BILLING_INFO": "Pendente de cobrança",
+    "ARCHIVED": "Arquivada",
+    "DELETED": "Excluída",
+}
 
 # Cada campanha otimiza para um objetivo diferente (venda, lead, conversa no whatsapp,
 # clique, etc.) - o "resultado" tem que ser o MESMO numero que aparece na coluna
@@ -173,11 +191,42 @@ def buscar_insights(ad_account_id: str, access_token: str, data_inicio: str, dat
     df["cpc"] = (df["gasto"] / df["cliques"].replace(0, pd.NA)).fillna(0)
     df["cpm"] = (df["gasto"] / df["impressoes"].replace(0, pd.NA) * 1000).fillna(0)
     df["cpa"] = (df["gasto"] / df["conversoes"].replace(0, pd.NA)).fillna(0)
-    df["status"] = "Ativo"
+
+    # "veiculacao" real de cada campanha (ativa, pausada, etc) - so da pra saber
+    # consultando o endpoint de campanhas, o de insights nao traz esse campo
+    status_por_id = buscar_status_campanhas(ad_account_id, access_token)
+    df["status"] = df.get("campaign_id", "").map(status_por_id).fillna("Desconhecido")
 
     return df[
         ["data", "campanha", "status", "gasto", "impressoes", "alcance", "cliques", "conversoes", "ctr", "cpc", "cpm", "cpa"]
     ]
+
+
+def buscar_status_campanhas(ad_account_id: str, access_token: str) -> dict:
+    """Status de veiculacao (ativa, pausada, em revisao, etc) de cada campanha da conta -
+    campo que so existe no endpoint de campanhas, nao no de insights."""
+    if not ad_account_id.startswith("act_"):
+        ad_account_id = f"act_{ad_account_id}"
+
+    url = f"{BASE_URL}/{ad_account_id}/campaigns"
+    params = {"fields": "id,effective_status", "access_token": access_token, "limit": 500}
+
+    status_por_id = {}
+    while url:
+        try:
+            resp = _session.get(url, params=params, timeout=30)
+        except requests.exceptions.RequestException:
+            break  # sem status disponivel: as campanhas ficam como "Desconhecido"
+        payload = resp.json()
+        if "error" in payload:
+            break
+        for row in payload.get("data", []):
+            status_bruto = row.get("effective_status", "")
+            status_por_id[row.get("id")] = STATUS_PT.get(status_bruto, status_bruto.title() or "Desconhecido")
+        url = payload.get("paging", {}).get("next")
+        params = None
+
+    return status_por_id
 
 
 def buscar_alcance_exato(ad_account_id: str, access_token: str, data_inicio: str, data_fim: str) -> dict:

@@ -397,6 +397,17 @@ def main():
         df = gerar_dados_diarios(pd.Timestamp(data_ini), pd.Timestamp(data_fim))
         fonte = "Dados de <b>demonstração</b>"
 
+    # campanhas pausadas/desativadas nao aparecem em nenhum lugar (tabela, graficos,
+    # totais) - filtra aqui uma unica vez pra tudo ficar consistente entre si
+    total_campanhas_periodo = df["campanha"].nunique()
+    df = df[df["status"] == "Ativo"]
+    if df.empty:
+        st.warning(
+            f"Nenhuma campanha ativa no período — {total_campanhas_periodo} campanha(s) "
+            "teve(veram) veiculação, mas todas estão pausadas/desativadas."
+        )
+        st.stop()
+
     periodo_label = f"{data_ini.strftime('%d/%m/%Y')} — {data_fim.strftime('%d/%m/%Y')}"
     st.markdown(
         f'<div class="hero-row"><div>'
