@@ -428,9 +428,10 @@ def main():
     logo_html = f'<img src="{logo_src}" alt="Vanti Marketing Criativo" class="hero-logo">' if logo_src else ""
     st.markdown(
         f'<div class="hero-row"><div>'
+        f'{logo_html}'
         f'<div class="kicker">Meta Ads · Relatório de campanha</div>'
         f'<div class="hero-title">Painel de Performance</div>'
-        f'</div><div class="hero-meta">{logo_html}{fonte}<br/>Período <b>{periodo_label}</b></div></div>',
+        f'</div><div class="hero-meta">{fonte}<br/>Período <b>{periodo_label}</b></div></div>',
         unsafe_allow_html=True,
     )
 

@@ -170,6 +170,24 @@ def global_css(theme: str) -> str:
         border-color: {p['border_strong']} !important;
         color: {p['text_primary']} !important;
     }}
+    /* qualquer outro botao de popover fora da barra do topo (ex: "Ocultar colunas" na
+       Tabela completa) - sem isso ele ficava preso no visual escuro padrao do Streamlit,
+       com o texto quase invisivel no tema claro. */
+    [data-testid="stPopoverButton"] {{
+        background: {p['surface_2']} !important;
+        border: 1px solid {p['border_strong']} !important;
+        color: {p['text_primary']} !important;
+    }}
+    [data-testid="stPopoverButton"] * {{
+        color: {p['text_primary']} !important;
+        user-select: none !important;
+        -webkit-user-select: none !important;
+        pointer-events: none !important;
+    }}
+    [data-testid="stPopoverButton"]:hover {{
+        background: {p['card_hover']} !important;
+        border-color: {p['accent_1']} !important;
+    }}
     .st-key-topbar button:hover,
     .st-key-topbar [data-testid="stSelectbox"] .react-aria-ComboBox > div:hover {{
         color: {p['text_primary']} !important;
@@ -247,10 +265,9 @@ def global_css(theme: str) -> str:
     .hero-meta b {{ color: {p['text_primary']}; font-weight: 700; }}
     .hero-logo {{
         display: block;
-        height: 22px;
+        height: clamp(32px, 4vw, 52px);
         width: auto;
-        margin: 0 0 10px auto;
-        opacity: 0.92;
+        margin: 0 0 12px 0;
     }}
 
     /* ---- KPI row ---- */
