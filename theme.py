@@ -116,8 +116,11 @@ def global_css(theme: str) -> str:
         gap: 8px;
         align-items: center;
     }}
-    /* botoes e selectbox: fantasma, so contorno tenue - altura minima de 40px para
-       a area clicavel real ficar confortavel (abaixo disso o clique fica "apertado") */
+    /* botoes e selectbox: contorno tenue, mas o TEXTO fica sempre legivel (nao depende
+       do hover para aparecer) - antes o texto ficava quase invisivel em repouso e so
+       "acendia" no hover; como o Streamlit redesenha o botao a cada clique, o mouse
+       perdia o :hover no instante do clique e o texto sumia de novo, parecendo bug.
+       altura minima de 40px para a area clicavel real ficar confortavel. */
     .st-key-topbar button,
     .st-key-topbar [data-testid="stSelectbox"] .react-aria-ComboBox > div {{
         background: transparent !important;
@@ -125,8 +128,8 @@ def global_css(theme: str) -> str:
         border-radius: 10px !important;
         min-height: 40px !important;
         height: 40px !important;
-        color: {p['muted']} !important;
-        transition: color 180ms ease, border-color 180ms ease, background 180ms ease;
+        color: {p['text_secondary']} !important;
+        transition: border-color 180ms ease, background 180ms ease;
     }}
     .st-key-topbar [data-testid="stPopoverButton"] {{
         background: transparent !important;
@@ -135,7 +138,7 @@ def global_css(theme: str) -> str:
         border-radius: 10px !important;
         min-height: 40px !important;
         height: 40px !important;
-        color: {p['muted']} !important;
+        color: {p['text_secondary']} !important;
     }}
     .st-key-topbar [data-testid="stPopoverButton"]:hover {{
         background-color: {p['card']} !important;
@@ -154,7 +157,7 @@ def global_css(theme: str) -> str:
         font-size: 11.5px !important;
         font-weight: 600 !important;
         letter-spacing: 0.04em;
-        color: {p['muted']} !important;
+        color: {p['text_secondary']} !important;
     }}
     .st-key-topbar button:hover p,
     .st-key-topbar button:hover div {{ color: {p['text_primary']} !important; }}
