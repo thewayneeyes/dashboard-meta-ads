@@ -180,6 +180,61 @@ def buscar_insights(ad_account_id: str, access_token: str, data_inicio: str, dat
     ]
 
 
+def buscar_alcance_exato(ad_account_id: str, access_token: str, data_inicio: str, data_fim: str) -> dict:
+    """Alcance (pessoas unicas) do periodo inteiro, igual ao numero que aparece no
+    Gerenciador de Anuncios - sem quebrar por dia, entao sem duplicar gente que foi
+    alcancada em mais de um dia (o que aconteceria se so somassemos os dias).
+
+    Retorna {"total": int, "por_campanha": {nome_campanha: int}}.
+    """
+    if not ad_account_id.startswith("act_"):
+        ad_account_id = f"act_{ad_account_id}"
+
+    url = f"{BASE_URL}/{ad_account_id}/insights"
+    params = {
+        "level": "campaign",
+        "fields": "campaign_name,reach",
+        "time_range": f'{{"since":"{data_inicio}","until":"{data_fim}"}}',
+        # sem time_increment: a Meta calcula o alcance unico do periodo inteiro de uma vez,
+        # em vez de um valor por dia que precisaria ser somado (e duplicaria pessoas)
+        "access_token": access_token,
+        "limit": 500,
+    }
+
+    try:
+        resp = _session.get(url, params=params, timeout=30)
+    except requests.exceptions.RequestException as e:
+        raise MetaAPIError(
+            "Não foi possível conectar à Meta API (falha de rede). Tente novamente em alguns segundos."
+        ) from e
+
+    payload = resp.json()
+    if "error" in payload:
+        raise MetaAPIError(payload["error"].get("message", "Erro ao buscar alcance"))
+
+    por_campanha = {}
+    for row in payload.get("data", []):
+        nome = row.get("campaign_name", "")
+        alcance = int(float(row.get("reach", 0) or 0))
+        por_campanha[nome] = por_campanha.get(nome, 0) + alcance
+
+    # alcance total da conta tambem e um pedido separado - o alcance de duas campanhas
+    # nao e somavel entre si (a mesma pessoa pode ter visto anuncios de ambas), entao o
+    # alcance "da conta" e sempre <= soma do alcance de cada campanha isolada
+    params_conta = dict(params)
+    params_conta["level"] = "account"
+    params_conta["fields"] = "reach"
+    try:
+        resp_conta = _session.get(url, params=params_conta, timeout=30)
+        payload_conta = resp_conta.json()
+        dados_conta = payload_conta.get("data", [])
+        total = int(float(dados_conta[0].get("reach", 0))) if dados_conta else sum(por_campanha.values())
+    except Exception:
+        total = sum(por_campanha.values())
+
+    return {"total": total, "por_campanha": por_campanha}
+
+
 def listar_contas(access_token: str) -> list[dict]:
     """Lista as contas de anuncios que o token enxerga (para o seletor de cliente)."""
     url = f"{BASE_URL}/me/adaccounts"

@@ -5,7 +5,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from charts import campaign_bar_chart, funnel_chart, trend_and_conversions
-from meta_api import MetaAPIError, buscar_insights, listar_contas
+from meta_api import MetaAPIError, buscar_alcance_exato, buscar_insights, listar_contas
 from mock_data import gerar_dados_diarios
 from theme import get_palette, global_css
 
@@ -132,7 +132,7 @@ def chart_shell_end():
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-def tabela_campanhas(df: pd.DataFrame) -> pd.DataFrame:
+def tabela_campanhas(df: pd.DataFrame, alcance_exato: dict | None = None) -> pd.DataFrame:
     agrupado = df.groupby(["campanha", "status"], as_index=False).agg(
         gasto=("gasto", "sum"),
         impressoes=("impressoes", "sum"),
@@ -140,6 +140,12 @@ def tabela_campanhas(df: pd.DataFrame) -> pd.DataFrame:
         cliques=("cliques", "sum"),
         conversoes=("conversoes", "sum"),
     )
+    if alcance_exato:
+        # troca o somatorio diario (aproximado) pelo alcance exato por campanha, do
+        # mesmo jeito que a Meta calcula - sem duplicar gente entre dias
+        por_campanha = alcance_exato.get("por_campanha", {})
+        agrupado["alcance"] = agrupado["campanha"].map(por_campanha).fillna(agrupado["alcance"]).astype(int)
+
     agrupado["ctr"] = (agrupado["cliques"] / agrupado["impressoes"].replace(0, pd.NA) * 100).fillna(0)
     agrupado["cpc"] = (agrupado["gasto"] / agrupado["cliques"].replace(0, pd.NA)).fillna(0)
     agrupado["cpa"] = (agrupado["gasto"] / agrupado["conversoes"].replace(0, pd.NA)).fillna(0)
@@ -283,10 +289,19 @@ def main():
     palette = get_palette(theme)
     persistir_tema(theme)
 
+    alcance_exato = None  # so preenchido no modo real - vem de uma consulta separada
+
     if modo == "Conta real (Meta API)" and ad_account_id and access_token:
         try:
             with st.spinner("Buscando dados na Meta API..."):
                 df = buscar_insights(ad_account_id, access_token, str(data_ini), str(data_fim))
+                if not df.empty:
+                    try:
+                        alcance_exato = buscar_alcance_exato(
+                            ad_account_id, access_token, str(data_ini), str(data_fim)
+                        )
+                    except MetaAPIError:
+                        alcance_exato = None  # sem isso, cai no somatorio diario como reserva
             if df.empty:
                 st.warning("Nenhum dado retornado para o período selecionado.")
                 st.stop()
@@ -313,7 +328,9 @@ def main():
     conversoes_total = int(df["conversoes"].sum())
     cliques_total = int(df["cliques"].sum())
     impressoes_total = int(df["impressoes"].sum())
-    alcance_total = int(df["alcance"].sum())
+    # alcance exato (consulta separada, sem duplicar gente entre dias) tem prioridade;
+    # so cai no somatorio diario (aproximado) se aquela consulta falhar ou no modo demo
+    alcance_total = alcance_exato["total"] if alcance_exato else int(df["alcance"].sum())
     cpa = gasto_total / conversoes_total if conversoes_total else 0
     ctr = cliques_total / impressoes_total * 100 if impressoes_total else 0
     cpm = gasto_total / impressoes_total * 1000 if impressoes_total else 0
@@ -373,7 +390,7 @@ def main():
         chart_shell_end()
 
     with tab_tabela:
-        tabela = tabela_campanhas(df)
+        tabela = tabela_campanhas(df, alcance_exato)
         todas_colunas = list(tabela.columns)
 
         col_filtro, _ = st.columns([1, 4])
