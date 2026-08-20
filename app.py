@@ -278,12 +278,22 @@ def _controles(theme: str):
     # conecta automaticamente sempre que houver token - sem alternancia manual demo/real
     modo = "Conta real (Meta API)" if token else "Dados de demonstração"
 
-    col_cliente, col_periodo, col_datas, col_conexao, col_tema = st.columns([3.0, 1.6, 1.6, 1.3, 1.3])
+    col_logo, col_cliente, col_periodo, col_datas, col_conexao, col_tema = st.columns(
+        [1.7, 2.6, 1.5, 1.3, 1.0, 0.5]
+    )
 
     ad_account_id = None
     nome_cliente = None
 
     conta_travada = conta_da_url()
+
+    with col_logo:
+        logo_src = logo_data_uri(theme)
+        if logo_src:
+            st.markdown(
+                f'<img src="{logo_src}" alt="Vanti Marketing Criativo" class="topbar-logo">',
+                unsafe_allow_html=True,
+            )
 
     with col_cliente:
         if modo == "Conta real (Meta API)" and conta_travada:
@@ -358,8 +368,8 @@ def _controles(theme: str):
                 dialog_conexao()
 
     with col_tema:
-        rotulo = "Tema claro" if theme == "dark" else "Tema escuro"
-        if st.button(rotulo, use_container_width=True, key="botao_tema", type="tertiary"):
+        icone = "☀️" if theme == "dark" else "🌙"
+        if st.button(icone, use_container_width=True, key="botao_tema", type="tertiary", help="Trocar tema"):
             st.query_params["theme"] = "light" if theme == "dark" else "dark"
             st.rerun()
 
@@ -424,11 +434,8 @@ def main():
         st.stop()
 
     periodo_label = f"{data_ini.strftime('%d/%m/%Y')} — {data_fim.strftime('%d/%m/%Y')}"
-    logo_src = logo_data_uri(theme)
-    logo_html = f'<img src="{logo_src}" alt="Vanti Marketing Criativo" class="hero-logo">' if logo_src else ""
     st.markdown(
         f'<div class="hero-row"><div>'
-        f'{logo_html}'
         f'<div class="kicker">Meta Ads · Relatório de campanha</div>'
         f'<div class="hero-title">Painel de Performance</div>'
         f'</div><div class="hero-meta">{fonte}<br/>Período <b>{periodo_label}</b></div></div>',

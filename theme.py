@@ -251,7 +251,7 @@ def global_css(theme: str) -> str:
         letter-spacing: -0.035em;
         margin: 0;
         text-transform: uppercase;
-        background: linear-gradient(96deg, {p['text_primary']} 14%, {p['accent_1']} 40%, {p['accent_2']} 58%, #fcbb14 74%);
+        background: linear-gradient(96deg, {p['text_primary']} 14%, {p['accent_1']} 40%, {p['accent_2']} 58%, #efd100 74%);
         -webkit-background-clip: text;
         background-clip: text;
         color: transparent;
@@ -263,11 +263,12 @@ def global_css(theme: str) -> str:
         line-height: 1.7;
     }}
     .hero-meta b {{ color: {p['text_primary']}; font-weight: 700; }}
-    .hero-logo {{
+    /* logo na barra de controles do topo - alinhada com os outros campos (40px de altura) */
+    .st-key-topbar .topbar-logo {{
         display: block;
-        height: clamp(32px, 4vw, 52px);
+        height: 34px;
         width: auto;
-        margin: 0 0 12px 0;
+        margin-top: 3px;
     }}
 
     /* ---- KPI row ---- */
