@@ -406,6 +406,13 @@ def global_css(theme: str) -> str:
     [role="option"] {{
         background: transparent !important;
         color: {p['text_primary']} !important;
+        min-height: 40px !important;
+        padding: 10px 14px !important;
+        display: flex !important;
+        align-items: center !important;
+        font-size: 14px !important;
+        cursor: pointer;
+        box-sizing: border-box !important;
     }}
     [role="option"]:hover,
     [role="option"][aria-selected="true"] {{
