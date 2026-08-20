@@ -25,6 +25,7 @@ PERIODOS = {
 }
 
 THEME_STORAGE_KEY = "meta_ads_theme"
+CLIENT_STORAGE_KEY = "meta_ads_client"
 
 
 def bloquear_traducao_automatica():
@@ -70,6 +71,24 @@ def resolver_tema() -> str:
 def persistir_tema(theme: str):
     components.html(
         f"<script>document.cookie = '{THEME_STORAGE_KEY}={theme}; path=/; max-age=31536000; SameSite=Lax';</script>",
+        height=0,
+    )
+
+
+def cliente_salvo() -> str:
+    """Ultimo cliente (conta de anuncios) acessado, guardado num cookie do navegador -
+    cada pessoa da agencia abre o dashboard e ja cai na conta que ela mesma viu por ultimo."""
+    try:
+        return st.context.cookies.get(CLIENT_STORAGE_KEY) or ""
+    except Exception:
+        return ""
+
+
+def persistir_cliente(ad_account_id: str):
+    if not ad_account_id:
+        return
+    components.html(
+        f"<script>document.cookie = '{CLIENT_STORAGE_KEY}={ad_account_id}; path=/; max-age=31536000; SameSite=Lax';</script>",
         height=0,
     )
 
@@ -148,28 +167,26 @@ def _contas_cache(token: str):
 
 @st.dialog("Conexão")
 def dialog_conexao():
-    """So a chave de API entra aqui - qual conta ver e escolhido direto na tela inicial."""
-    modo = st.radio(
-        "Fonte de dados",
-        ["Dados de demonstração", "Conta real (Meta API)"],
-        index=0 if st.session_state.get("cfg_modo", "Dados de demonstração") == "Dados de demonstração" else 1,
+    """So a chave de API - qual conta ver e escolhido direto na tela inicial, e o dashboard
+    ja conecta sozinho sempre que o token estiver disponivel (nada de alternar demo/real)."""
+    token_secreto = token_salvo()
+
+    if token_secreto:
+        st.success("Token de acesso configurado — o dashboard já conecta automaticamente.")
+        st.caption("Para trocar o token, atualize em Settings → Secrets no Streamlit Cloud.")
+        if st.button("Fechar", use_container_width=True, type="primary"):
+            st.rerun()
+        return
+
+    st.caption("Nenhum token salvo no servidor. Cole abaixo para conectar nesta sessão.")
+    token = st.text_input(
+        "Token de acesso",
+        value=st.session_state.get("cfg_token", ""),
+        type="password",
+        help="Para não precisar colar toda vez, salve em Settings → Secrets no Streamlit Cloud (META_ACCESS_TOKEN).",
     )
 
-    token = token_salvo()
-
-    if modo == "Conta real (Meta API)":
-        if not token:
-            token = st.text_input(
-                "Token de acesso",
-                value=st.session_state.get("cfg_token", ""),
-                type="password",
-                help="Cole aqui ou salve em .streamlit/secrets.toml para não precisar colar toda vez.",
-            )
-        else:
-            st.caption("Token de acesso salvo — não precisa colar de novo.")
-
     if st.button("Aplicar", use_container_width=True, type="primary"):
-        st.session_state["cfg_modo"] = modo
         st.session_state["cfg_token"] = token
         st.rerun()
 
@@ -182,8 +199,9 @@ def barra_controles(theme: str):
 
 
 def _controles(theme: str):
-    modo = st.session_state.get("cfg_modo", "Dados de demonstração")
     token = st.session_state.get("cfg_token") or token_salvo() or None
+    # conecta automaticamente sempre que houver token - sem alternancia manual demo/real
+    modo = "Conta real (Meta API)" if token else "Dados de demonstração"
 
     col_cliente, col_periodo, col_datas, col_conexao, col_tema = st.columns([3.0, 1.6, 1.6, 1.3, 1.3])
 
@@ -191,7 +209,7 @@ def _controles(theme: str):
     nome_cliente = None
 
     with col_cliente:
-        if modo == "Conta real (Meta API)" and token:
+        if modo == "Conta real (Meta API)":
             try:
                 contas = _contas_cache(token)
             except MetaAPIError as e:
@@ -201,22 +219,28 @@ def _controles(theme: str):
             if contas:
                 rotulos = [f"{c['name']} ({c['id']})" for c in contas]
                 ids = [c["id"] for c in contas]
-                conta_salva = st.session_state.get("cfg_conta") or st.secrets.get("META_AD_ACCOUNT_ID", "")
-                indice_padrao = ids.index(conta_salva) if conta_salva in ids else 0
+                # prioridade pra escolher a conta padrao: selecao atual > ultimo cliente
+                # acessado (cookie do navegador) > conta fixa nos Secrets > primeira da lista
+                conta_padrao = (
+                    st.session_state.get("cfg_conta")
+                    or cliente_salvo()
+                    or st.secrets.get("META_AD_ACCOUNT_ID", "")
+                )
+                indice_padrao = ids.index(conta_padrao) if conta_padrao in ids else 0
                 escolha = st.selectbox(
                     "Conta do cliente", rotulos, index=indice_padrao, key="sel_cliente", label_visibility="collapsed"
                 )
                 idx = rotulos.index(escolha)
                 ad_account_id = ids[idx]
                 nome_cliente = contas[idx]["name"]
+                if ad_account_id != st.session_state.get("cfg_conta"):
+                    persistir_cliente(ad_account_id)
                 st.session_state["cfg_conta"] = ad_account_id
                 st.session_state["cfg_conta_nome"] = nome_cliente
             else:
                 st.caption("Sem contas encontradas para esse token.")
-        elif modo == "Conta real (Meta API)":
-            st.caption("Configure o token em Conexão →")
         else:
-            st.caption("Modo demonstração")
+            st.caption("Modo demonstração — configure o token em Conexão →")
 
     with col_periodo:
         periodo = st.selectbox(
