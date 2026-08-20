@@ -130,6 +130,20 @@ def global_css(theme: str) -> str:
         height: 40px !important;
         color: {p['text_secondary']} !important;
         transition: border-color 180ms ease, background 180ms ease;
+        user-select: none !important;
+        -webkit-user-select: none !important;
+        cursor: pointer !important;
+    }}
+    /* a palavra dentro do botao (ex: "Conexao") e texto normal, entao e SELECIONAVEL por
+       padrao - um clique real de mouse sempre tem um micro-arrasto entre apertar/soltar,
+       e o navegador interpreta isso como "selecionar o texto" em vez de "clicar no botao"
+       quando o cursor esta exatamente em cima da palavra. Desativando a selecao aqui. */
+    .st-key-topbar button *,
+    .st-key-topbar [data-testid="stPopoverButton"] *,
+    .stTabs [data-baseweb="tab"] * {{
+        user-select: none !important;
+        -webkit-user-select: none !important;
+        pointer-events: none !important;
     }}
     .st-key-topbar [data-testid="stPopoverButton"] {{
         background: transparent !important;
@@ -372,6 +386,13 @@ def global_css(theme: str) -> str:
     [data-testid="stDialog"] [role="dialog"] input {{
         color: {p['text_primary']} !important;
         background: {p['surface']} !important;
+    }}
+    /* mesmo problema de selecao de texto "engolindo" o clique, resolvido igual aos
+       botoes do topo: nenhum filho do botao intercepta o clique. */
+    [data-testid="stDialog"] [role="dialog"] button * {{
+        user-select: none !important;
+        -webkit-user-select: none !important;
+        pointer-events: none !important;
     }}
     [data-testid="stDialog"] [role="dialog"] button[kind="primary"],
     [data-testid="stDialog"] [role="dialog"] button[kind="primary"] p {{
