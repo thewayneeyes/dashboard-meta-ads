@@ -173,6 +173,31 @@ def _contas_cache(token: str):
     return listar_contas(token)
 
 
+CLIENT_VIEW_PARAM = "cliente"
+
+
+def conta_da_url() -> str:
+    """Se o link tiver ?cliente=act_123, a tela trava nessa conta - usado pro link que a
+    agencia manda pro proprio cliente final acessar so os dados dele."""
+    valor = st.query_params.get(CLIENT_VIEW_PARAM, "")
+    if valor and not valor.startswith("act_"):
+        valor = f"act_{valor}"
+    return valor
+
+
+def link_visualizacao_cliente(ad_account_id: str) -> str:
+    """Monta o link publico que, quando aberto, trava a tela nessa conta - sem mostrar as
+    outras contas, sem token nenhum na URL (o token fica so no servidor)."""
+    try:
+        host = st.context.headers.get("host", "")
+    except Exception:
+        host = ""
+    if not host:
+        return f"?{CLIENT_VIEW_PARAM}={ad_account_id}"
+    esquema = "http" if host.startswith("localhost") else "https"
+    return f"{esquema}://{host}/?{CLIENT_VIEW_PARAM}={ad_account_id}"
+
+
 @st.dialog("Conexão")
 def dialog_conexao():
     """So a chave de API - qual conta ver e escolhido direto na tela inicial, e o dashboard
@@ -182,6 +207,7 @@ def dialog_conexao():
     if token_secreto:
         st.success("Token de acesso configurado — o dashboard já conecta automaticamente.")
         st.caption("Para trocar o token, atualize em Settings → Secrets no Streamlit Cloud.")
+        _secao_link_cliente(token_secreto)
         if st.button("Fechar", use_container_width=True, type="primary"):
             st.rerun()
         return
@@ -197,6 +223,32 @@ def dialog_conexao():
     if st.button("Aplicar", use_container_width=True, type="primary"):
         st.session_state["cfg_token"] = token
         st.rerun()
+
+
+def _secao_link_cliente(token: str):
+    """Gera um link que trava a tela numa conta so - pra agencia mandar pro proprio
+    cliente final acessar apenas os dados dele, sem ver as outras contas nem o token."""
+    st.divider()
+    st.markdown("**Link para o cliente**")
+    st.caption("Gere um link travado numa única conta — quem abrir só vê aquele cliente.")
+
+    try:
+        contas = _contas_cache(token)
+    except MetaAPIError:
+        contas = []
+
+    if not contas:
+        st.caption("Nenhuma conta disponível ainda.")
+        return
+
+    rotulos = [f"{c['name']} ({c['id']})" for c in contas]
+    ids = [c["id"] for c in contas]
+    conta_atual = st.session_state.get("cfg_conta")
+    indice_padrao = ids.index(conta_atual) if conta_atual in ids else 0
+
+    escolha = st.selectbox("Cliente", rotulos, index=indice_padrao, key="sel_cliente_link")
+    ad_account_id = ids[rotulos.index(escolha)]
+    st.code(link_visualizacao_cliente(ad_account_id), language=None)
 
 
 def barra_controles(theme: str):
@@ -216,8 +268,29 @@ def _controles(theme: str):
     ad_account_id = None
     nome_cliente = None
 
+    conta_travada = conta_da_url()
+
     with col_cliente:
-        if modo == "Conta real (Meta API)":
+        if modo == "Conta real (Meta API)" and conta_travada:
+            # link de cliente final: tela travada numa conta so, sem selectbox, sem ver
+            # o resto da carteira da agencia
+            try:
+                contas = _contas_cache(token)
+            except MetaAPIError:
+                contas = []
+            info_conta = next((c for c in contas if c["id"] == conta_travada), None)
+            if info_conta:
+                ad_account_id = conta_travada
+                nome_cliente = info_conta["name"]
+                st.session_state["cfg_conta_nome"] = nome_cliente
+                st.markdown(
+                    f'<div style="padding-top:8px;font-weight:700;" class="notranslate" translate="no">'
+                    f'{nome_cliente}</div>',
+                    unsafe_allow_html=True,
+                )
+            # se a conta do link nao existir mais (removida, token trocado), ad_account_id
+            # fica None e o main() mostra uma mensagem de erro clara em vez de vazar dados
+        elif modo == "Conta real (Meta API)":
             try:
                 contas = _contas_cache(token)
             except MetaAPIError as e:
@@ -264,8 +337,10 @@ def _controles(theme: str):
             data_ini, data_fim = calcular_intervalo(periodo)
 
     with col_conexao:
-        if st.button("Conexão", use_container_width=True, key="btn_conexao", type="tertiary"):
-            dialog_conexao()
+        if not conta_travada:
+            # visualizacao de cliente (link travado numa conta) nao tem acesso a Conexao
+            if st.button("Conexão", use_container_width=True, key="btn_conexao", type="tertiary"):
+                dialog_conexao()
 
     with col_tema:
         rotulo = "Tema claro" if theme == "dark" else "Tema escuro"
@@ -273,7 +348,7 @@ def _controles(theme: str):
             st.query_params["theme"] = "light" if theme == "dark" else "dark"
             st.rerun()
 
-    return theme, modo, ad_account_id, token, data_ini, data_fim
+    return theme, modo, ad_account_id, token, data_ini, data_fim, bool(conta_travada)
 
 
 def main():
@@ -283,11 +358,18 @@ def main():
     st.markdown(global_css(theme_inicial), unsafe_allow_html=True)
 
     st.markdown('<div class="topbar-anchor"></div>', unsafe_allow_html=True)
-    theme, modo, ad_account_id, access_token, data_ini, data_fim = barra_controles(theme_inicial)
+    theme, modo, ad_account_id, access_token, data_ini, data_fim, conta_travada = barra_controles(theme_inicial)
 
     st.markdown(global_css(theme), unsafe_allow_html=True)
     palette = get_palette(theme)
     persistir_tema(theme)
+
+    if conta_travada and not ad_account_id:
+        # link de cliente apontando pra uma conta que sumiu (token trocado, conta
+        # removida) - mostra erro claro em vez de cair no modo demonstracao por engano
+        st.error("Este link não é válido ou a conta não está mais disponível.")
+        st.info("Peça um novo link para a agência.")
+        st.stop()
 
     alcance_exato = None  # so preenchido no modo real - vem de uma consulta separada
 
