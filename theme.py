@@ -116,14 +116,15 @@ def global_css(theme: str) -> str:
         gap: 8px;
         align-items: center;
     }}
-    /* botoes e selectbox: fantasma, so contorno tenue */
+    /* botoes e selectbox: fantasma, so contorno tenue - altura minima de 40px para
+       a area clicavel real ficar confortavel (abaixo disso o clique fica "apertado") */
     .st-key-topbar button,
     .st-key-topbar [data-testid="stSelectbox"] .react-aria-ComboBox > div {{
         background: transparent !important;
         border: 1px solid {p['border']} !important;
         border-radius: 10px !important;
-        min-height: 32px !important;
-        height: 32px !important;
+        min-height: 40px !important;
+        height: 40px !important;
         color: {p['muted']} !important;
         transition: color 180ms ease, border-color 180ms ease, background 180ms ease;
     }}
@@ -132,8 +133,8 @@ def global_css(theme: str) -> str:
         background-color: transparent !important;
         border: 1px solid {p['border']} !important;
         border-radius: 10px !important;
-        min-height: 32px !important;
-        height: 32px !important;
+        min-height: 40px !important;
+        height: 40px !important;
         color: {p['muted']} !important;
     }}
     .st-key-topbar [data-testid="stPopoverButton"]:hover {{
@@ -157,7 +158,7 @@ def global_css(theme: str) -> str:
     }}
     .st-key-topbar button:hover p,
     .st-key-topbar button:hover div {{ color: {p['text_primary']} !important; }}
-    .st-key-topbar input {{ height: 30px !important; }}
+    .st-key-topbar input {{ height: 38px !important; }}
     .st-key-topbar svg {{ width: 14px; height: 14px; opacity: 0.6; }}
     .st-key-topbar [data-testid="stSelectbox"] label {{ display: none !important; }}
     [data-testid="stCaptionContainer"] {{ color: {p['muted']} !important; font-size: 12px; }}
@@ -291,7 +292,7 @@ def global_css(theme: str) -> str:
         width: fit-content;
     }}
     .stTabs [data-baseweb="tab"] {{
-        height: 32px;
+        height: 40px;
         border-radius: 9px;
         color: {p['text_secondary']};
         font-weight: 700;
