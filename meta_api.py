@@ -7,7 +7,7 @@ from urllib3.util.retry import Retry
 GRAPH_API_VERSION = "v21.0"
 BASE_URL = f"https://graph.facebook.com/{GRAPH_API_VERSION}"
 
-FIELDS = "campaign_name,spend,impressions,clicks,ctr,cpc,cpm,actions,optimization_goal,date_start,date_stop"
+FIELDS = "campaign_name,spend,impressions,reach,clicks,ctr,cpc,cpm,actions,optimization_goal,date_start,date_stop"
 
 # Cada campanha otimiza para um objetivo diferente (venda, lead, conversa no whatsapp,
 # clique, etc.) - o "resultado" tem que ser o MESMO numero que aparece na coluna
@@ -126,6 +126,11 @@ def buscar_insights(ad_account_id: str, access_token: str, data_inicio: str, dat
     df = pd.DataFrame(registros)
     df["gasto"] = pd.to_numeric(df.get("spend", 0), errors="coerce").fillna(0)
     df["impressoes"] = pd.to_numeric(df.get("impressions", 0), errors="coerce").fillna(0).astype(int)
+    # alcance (pessoas unicas) nao e estritamente somavel entre dias diferentes (a mesma
+    # pessoa alcancada em dois dias conta 2x na soma) - e uma aproximacao comum em
+    # dashboards simples, mas por isso o alcance total pode vir levemente maior que o
+    # alcance "real" do periodo inteiro que o Gerenciador de Anuncios mostraria.
+    df["alcance"] = pd.to_numeric(df.get("reach", 0), errors="coerce").fillna(0).astype(int)
     df["cliques"] = pd.to_numeric(df.get("clicks", 0), errors="coerce").fillna(0).astype(int)
     df["data"] = pd.to_datetime(df["date_start"])
     df["campanha"] = df["campaign_name"]
@@ -170,7 +175,9 @@ def buscar_insights(ad_account_id: str, access_token: str, data_inicio: str, dat
     df["cpa"] = (df["gasto"] / df["conversoes"].replace(0, pd.NA)).fillna(0)
     df["status"] = "Ativo"
 
-    return df[["data", "campanha", "status", "gasto", "impressoes", "cliques", "conversoes", "ctr", "cpc", "cpm", "cpa"]]
+    return df[
+        ["data", "campanha", "status", "gasto", "impressoes", "alcance", "cliques", "conversoes", "ctr", "cpc", "cpm", "cpa"]
+    ]
 
 
 def listar_contas(access_token: str) -> list[dict]:

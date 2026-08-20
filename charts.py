@@ -133,14 +133,15 @@ def trend_and_conversions(dates: list[str], gasto: list[float], conversoes: list
     """
 
 
-def funnel_chart(impressoes: int, cliques: int, conversoes: int, theme: str) -> str:
+def funnel_chart(impressoes: int, alcance: int, cliques: int, conversoes: int, theme: str) -> str:
     p = get_palette(theme)
-    ramp_light = ["#c4b5fd", "#7c3aed", "#4c1d95"]
-    ramp_dark = ["#c4b5fd", "#8b5cf6", "#5b21b6"]
+    ramp_light = ["#c4b5fd", "#a78bfa", "#7c3aed", "#4c1d95"]
+    ramp_dark = ["#c4b5fd", "#a78bfa", "#8b5cf6", "#5b21b6"]
     cores = ramp_light if theme == "light" else ramp_dark
 
     data = [
         {"name": "Impressões", "value": impressoes},
+        {"name": "Alcance", "value": alcance},
         {"name": "Cliques", "value": cliques},
         {"name": "Conversões", "value": conversoes},
     ]

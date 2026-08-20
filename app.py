@@ -136,6 +136,7 @@ def tabela_campanhas(df: pd.DataFrame) -> pd.DataFrame:
     agrupado = df.groupby(["campanha", "status"], as_index=False).agg(
         gasto=("gasto", "sum"),
         impressoes=("impressoes", "sum"),
+        alcance=("alcance", "sum"),
         cliques=("cliques", "sum"),
         conversoes=("conversoes", "sum"),
     )
@@ -150,9 +151,10 @@ def tabela_campanhas(df: pd.DataFrame) -> pd.DataFrame:
     fmt["cpa"] = fmt["cpa"].apply(formatar_moeda)
     fmt["ctr"] = fmt["ctr"].apply(lambda v: f"{v:.2f}%")
     fmt["impressoes"] = fmt["impressoes"].apply(formatar_numero)
+    fmt["alcance"] = fmt["alcance"].apply(formatar_numero)
     fmt["cliques"] = fmt["cliques"].apply(formatar_numero)
     fmt["conversoes"] = fmt["conversoes"].apply(formatar_numero)
-    fmt.columns = ["Campanha", "Status", "Gasto", "Impressões", "Cliques", "Conversões", "CTR", "CPC", "CPA"]
+    fmt.columns = ["Campanha", "Status", "Gasto", "Impressões", "Alcance", "Cliques", "Conversões", "CTR", "CPC", "CPA"]
     return fmt
 
 
@@ -311,6 +313,7 @@ def main():
     conversoes_total = int(df["conversoes"].sum())
     cliques_total = int(df["cliques"].sum())
     impressoes_total = int(df["impressoes"].sum())
+    alcance_total = int(df["alcance"].sum())
     cpa = gasto_total / conversoes_total if conversoes_total else 0
     ctr = cliques_total / impressoes_total * 100 if impressoes_total else 0
     cpm = gasto_total / impressoes_total * 1000 if impressoes_total else 0
@@ -346,7 +349,9 @@ def main():
 
     with tab_funil:
         chart_shell_start("Funil de Performance", "Do alcance à conversão — onde o público se perde")
-        components.html(funnel_chart(impressoes_total, cliques_total, conversoes_total, theme), height=352)
+        components.html(
+            funnel_chart(impressoes_total, alcance_total, cliques_total, conversoes_total, theme), height=352
+        )
         chart_shell_end()
 
     with tab_campanhas:
@@ -368,7 +373,21 @@ def main():
         chart_shell_end()
 
     with tab_tabela:
-        st.dataframe(tabela_campanhas(df), use_container_width=True, hide_index=True)
+        tabela = tabela_campanhas(df)
+        todas_colunas = list(tabela.columns)
+
+        col_filtro, _ = st.columns([1, 4])
+        with col_filtro:
+            with st.popover("Ocultar colunas", use_container_width=True):
+                st.caption("Desmarque o que não quer ver na tabela")
+                ocultas = [
+                    coluna
+                    for coluna in todas_colunas
+                    if coluna != "Campanha" and not st.checkbox(coluna, value=True, key=f"col_{coluna}")
+                ]
+
+        colunas_visiveis = [c for c in todas_colunas if c not in ocultas]
+        st.dataframe(tabela[colunas_visiveis], use_container_width=True, hide_index=True)
 
 
 if __name__ == "__main__":

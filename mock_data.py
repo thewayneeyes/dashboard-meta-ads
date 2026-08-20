@@ -29,6 +29,9 @@ def gerar_dados_diarios(data_inicio: pd.Timestamp, data_fim: pd.Timestamp, seed:
             variacao = rng.normal(1.0, 0.18)
             gasto = max(gasto_base * variacao, 5)
             impressoes = int(gasto / rng.uniform(0.015, 0.035))
+            # alcance (pessoas unicas) e sempre <= impressoes, ja que a mesma pessoa pode
+            # ver o anuncio mais de uma vez (frequencia media aqui fica entre ~1.15x e ~1.6x)
+            alcance = int(impressoes / rng.uniform(1.15, 1.6))
             cliques = max(int(impressoes * ctr_base * rng.normal(1.0, 0.15)), 0)
             conversoes = max(int(cliques * conv_rate_base * rng.normal(1.0, 0.2)), 0)
 
@@ -39,6 +42,7 @@ def gerar_dados_diarios(data_inicio: pd.Timestamp, data_fim: pd.Timestamp, seed:
                     "status": status,
                     "gasto": round(gasto, 2),
                     "impressoes": impressoes,
+                    "alcance": alcance,
                     "cliques": cliques,
                     "conversoes": conversoes,
                 }
