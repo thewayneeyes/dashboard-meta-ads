@@ -455,6 +455,44 @@ def global_css(theme: str) -> str:
         color: {p['text_primary']} !important;
     }}
 
+    /* bloco de codigo (ex: link do cliente em Conexao) sempre tem fundo escuro por
+       padrao do Streamlit, mas a regra global de cor do span pintava o texto de dentro
+       dele com a cor do tema claro (quase preto) - texto escuro em cima de fundo escuro
+       ficava invisivel. Aqui fixamos o texto do codigo sempre claro, ja que o fundo dele
+       nunca muda com o tema. */
+    [data-testid="stCode"] * {{
+        color: #e7e6ee !important;
+    }}
+
+    /* popover (ex: "Datas") renderiza em portal fora do fluxo normal e nao herdava o
+       tema - ficava sempre no visual escuro padrao do Streamlit mesmo no tema claro. */
+    [data-testid="stPopoverBody"] {{
+        background: {p['surface_2']} !important;
+        border: 1px solid {p['border_strong']} !important;
+        border-radius: 14px !important;
+        box-shadow: 0 20px 50px -14px rgba(0,0,0,0.5) !important;
+    }}
+    [data-testid="stPopoverBody"] * {{
+        color: {p['text_primary']} !important;
+    }}
+    [data-testid="stPopoverBody"] [data-testid="stWidgetLabel"] p {{
+        color: {p['text_secondary']} !important;
+        font-size: 12px !important;
+        font-weight: 700 !important;
+    }}
+    [data-testid="stPopoverBody"] input {{
+        background: {p['surface']} !important;
+        border-color: {p['border_strong']} !important;
+        color: {p['text_primary']} !important;
+    }}
+    /* calendario que abre ao clicar no campo de data */
+    [data-baseweb="calendar"] {{
+        background: {p['surface_2']} !important;
+    }}
+    [data-baseweb="calendar"] * {{
+        color: {p['text_primary']} !important;
+    }}
+
     iframe {{ display: block; }}
     /* graficos: altura acompanha a janela em vez do atributo height fixo passado ao
        components.html - evita rolagem quando a barra de favoritos/abas reduz a tela.
