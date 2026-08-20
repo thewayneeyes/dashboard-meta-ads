@@ -233,7 +233,7 @@ def global_css(theme: str) -> str:
         letter-spacing: -0.035em;
         margin: 0;
         text-transform: uppercase;
-        background: linear-gradient(96deg, {p['text_primary']} 18%, {p['accent_1']} 55%, {p['accent_2']} 80%, #fcbb14 100%);
+        background: linear-gradient(96deg, {p['text_primary']} 14%, {p['accent_1']} 40%, {p['accent_2']} 58%, #fcbb14 74%);
         -webkit-background-clip: text;
         background-clip: text;
         color: transparent;
