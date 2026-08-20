@@ -10,39 +10,48 @@ BASE_URL = f"https://graph.facebook.com/{GRAPH_API_VERSION}"
 FIELDS = "campaign_name,spend,impressions,clicks,ctr,cpc,cpm,actions,optimization_goal,date_start,date_stop"
 
 # Cada campanha otimiza para um objetivo diferente (venda, lead, conversa no whatsapp,
-# clique, etc.) - o "resultado" tem que ser contado de acordo com esse objetivo, igual
-# o proprio Gerenciador de Anuncios faz. Sem isso, campanhas de mensagem/engajamento
-# aparecem com 0 conversoes mesmo estando ativas e performando bem.
+# clique, etc.) - o "resultado" tem que ser o MESMO numero que aparece na coluna
+# "Resultados" do Gerenciador de Anuncios pra aquele objetivo. Cada lista abaixo e uma
+# ORDEM DE PRIORIDADE (pega o primeiro action_type que existir nos dados, NAO soma
+# todos - somar tipos diferentes gerava numero maior que o real).
+#
+# Nota sobre REPLIES: campanhas de "resposta a mensagem" no Ads Manager mostram como
+# resultado principal "Conversas iniciadas por mensagem", nao "Respostas" - confirmado
+# comparando com uma campanha real (objetivo tecnico REPLIES, coluna Resultados = 392 =
+# onsite_conversion.messaging_conversation_started_7d; nosso calculo antigo pegava
+# messaging_first_reply = 349, que e uma metrica diferente).
 METAS_POR_OBJETIVO = {
-    "OFFSITE_CONVERSIONS": ["offsite_conversion.fb_pixel_purchase", "purchase", "omni_purchase"],
-    "VALUE": ["offsite_conversion.fb_pixel_purchase", "purchase", "omni_purchase"],
-    "LEAD_GENERATION": ["lead", "onsite_conversion.lead_grouped"],
-    "QUALITY_LEAD": ["lead", "onsite_conversion.lead_grouped"],
-    "CONVERSATIONS": [
-        "onsite_conversion.messaging_conversation_started_7d",
-        "onsite_conversion.total_messaging_connection",
-    ],
-    "REPLIES": ["onsite_conversion.messaging_first_reply"],
+    "OFFSITE_CONVERSIONS": ["omni_purchase", "offsite_conversion.fb_pixel_purchase", "purchase"],
+    "VALUE": ["omni_purchase", "offsite_conversion.fb_pixel_purchase", "purchase"],
+    "LEAD_GENERATION": ["onsite_conversion.lead_grouped", "lead"],
+    "QUALITY_LEAD": ["onsite_conversion.lead_grouped", "lead"],
+    "CONVERSATIONS": ["onsite_conversion.messaging_conversation_started_7d"],
+    "REPLIES": ["onsite_conversion.messaging_conversation_started_7d"],
     "LINK_CLICKS": ["link_click"],
     "LANDING_PAGE_VIEWS": ["landing_page_view"],
     "POST_ENGAGEMENT": ["post_engagement"],
     "PAGE_LIKES": ["like"],
-    "APP_INSTALLS": ["mobile_app_install", "omni_app_install"],
+    "APP_INSTALLS": ["omni_app_install", "mobile_app_install"],
     "THRUPLAY": ["video_view"],
     "VIDEO_VIEWS": ["video_view"],
+    # objetivos de alcance/exibicao pura: o "resultado" e alcance ou impressoes, nao uma
+    # acao de conversao - lista vazia = 0 conversoes de proposito (fica no gasto/CTR/CPM).
+    "REACH": [],
+    "IMPRESSIONS": [],
+    "BRAND_AWARENESS": [],
 }
 
-# Usado quando o objetivo nao esta mapeado acima, ou quando o mapeado nao bate com
-# nenhum action_type retornado (ex: relatorio agregando varios conjuntos de anuncio
-# com objetivos diferentes sob a mesma campanha).
-METAS_PADRAO = {
+# Usado SO quando o optimization_goal nao esta mapeado acima (objetivo desconhecido/novo).
+# Tambem em ordem de prioridade - pega o primeiro que existir, nao soma.
+METAS_PADRAO = [
+    "onsite_conversion.lead_grouped",
     "lead",
-    "purchase",
     "omni_purchase",
-    "complete_registration",
     "offsite_conversion.fb_pixel_purchase",
+    "purchase",
+    "complete_registration",
     "onsite_conversion.messaging_conversation_started_7d",
-}
+]
 
 
 class MetaAPIError(Exception):
@@ -121,23 +130,35 @@ def buscar_insights(ad_account_id: str, access_token: str, data_inicio: str, dat
     df["data"] = pd.to_datetime(df["date_start"])
     df["campanha"] = df["campaign_name"]
 
-    def _somar(actions, tipos):
+    def _valor_da_acao(actions, action_type):
         if not isinstance(actions, list):
             return 0
-        return sum(int(float(a.get("value", 0))) for a in actions if a.get("action_type") in tipos)
+        for a in actions:
+            if a.get("action_type") == action_type:
+                return int(float(a.get("value", 0)))
+        return 0
+
+    def _primeiro_que_existir(actions, tipos_em_ordem):
+        """Pega o valor do PRIMEIRO action_type da lista que aparecer nos dados -
+        nao soma varios tipos juntos (isso inflaria o numero alem do que o Gerenciador
+        de Anuncios mostra, ja que tipos diferentes podem se sobrepor)."""
+        for tipo in tipos_em_ordem:
+            valor = _valor_da_acao(actions, tipo)
+            if valor > 0:
+                return valor
+        return 0
 
     def extrair_conversoes(row):
         actions = row.get("actions")
         objetivo = row.get("optimization_goal")
-        tipos_do_objetivo = METAS_POR_OBJETIVO.get(objetivo)
 
-        if tipos_do_objetivo:
-            total = _somar(actions, tipos_do_objetivo)
-            if total > 0:
-                return total
+        if objetivo in METAS_POR_OBJETIVO:
+            # objetivo conhecido: usa exatamente a metrica que ele define (pode ser
+            # lista vazia de proposito, ex: campanhas de alcance -> 0 conversoes)
+            return _primeiro_que_existir(actions, METAS_POR_OBJETIVO[objetivo])
 
-        # objetivo nao mapeado (ou mapeado mas sem esse action_type nos dados): usa o conjunto padrao
-        return _somar(actions, METAS_PADRAO)
+        # objetivo desconhecido/nao mapeado: tenta o conjunto padrao
+        return _primeiro_que_existir(actions, METAS_PADRAO)
 
     if "optimization_goal" not in df.columns:
         df["optimization_goal"] = None
