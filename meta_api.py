@@ -7,7 +7,42 @@ from urllib3.util.retry import Retry
 GRAPH_API_VERSION = "v21.0"
 BASE_URL = f"https://graph.facebook.com/{GRAPH_API_VERSION}"
 
-FIELDS = "campaign_name,spend,impressions,clicks,ctr,cpc,cpm,actions,date_start,date_stop"
+FIELDS = "campaign_name,spend,impressions,clicks,ctr,cpc,cpm,actions,optimization_goal,date_start,date_stop"
+
+# Cada campanha otimiza para um objetivo diferente (venda, lead, conversa no whatsapp,
+# clique, etc.) - o "resultado" tem que ser contado de acordo com esse objetivo, igual
+# o proprio Gerenciador de Anuncios faz. Sem isso, campanhas de mensagem/engajamento
+# aparecem com 0 conversoes mesmo estando ativas e performando bem.
+METAS_POR_OBJETIVO = {
+    "OFFSITE_CONVERSIONS": ["offsite_conversion.fb_pixel_purchase", "purchase", "omni_purchase"],
+    "VALUE": ["offsite_conversion.fb_pixel_purchase", "purchase", "omni_purchase"],
+    "LEAD_GENERATION": ["lead", "onsite_conversion.lead_grouped"],
+    "QUALITY_LEAD": ["lead", "onsite_conversion.lead_grouped"],
+    "CONVERSATIONS": [
+        "onsite_conversion.messaging_conversation_started_7d",
+        "onsite_conversion.total_messaging_connection",
+    ],
+    "REPLIES": ["onsite_conversion.messaging_first_reply"],
+    "LINK_CLICKS": ["link_click"],
+    "LANDING_PAGE_VIEWS": ["landing_page_view"],
+    "POST_ENGAGEMENT": ["post_engagement"],
+    "PAGE_LIKES": ["like"],
+    "APP_INSTALLS": ["mobile_app_install", "omni_app_install"],
+    "THRUPLAY": ["video_view"],
+    "VIDEO_VIEWS": ["video_view"],
+}
+
+# Usado quando o objetivo nao esta mapeado acima, ou quando o mapeado nao bate com
+# nenhum action_type retornado (ex: relatorio agregando varios conjuntos de anuncio
+# com objetivos diferentes sob a mesma campanha).
+METAS_PADRAO = {
+    "lead",
+    "purchase",
+    "omni_purchase",
+    "complete_registration",
+    "offsite_conversion.fb_pixel_purchase",
+    "onsite_conversion.messaging_conversation_started_7d",
+}
 
 
 class MetaAPIError(Exception):
@@ -49,6 +84,9 @@ def buscar_insights(ad_account_id: str, access_token: str, data_inicio: str, dat
         "fields": FIELDS,
         "time_range": f'{{"since":"{data_inicio}","until":"{data_fim}"}}',
         "time_increment": 1,
+        # mesma janela de atribuicao padrao usada pelo Gerenciador de Anuncios,
+        # para os numeros baterem com o que a agencia ja ve la
+        "action_attribution_windows": "7d_click,1d_view",
         "access_token": access_token,
         "limit": 500,
     }
@@ -83,14 +121,27 @@ def buscar_insights(ad_account_id: str, access_token: str, data_inicio: str, dat
     df["data"] = pd.to_datetime(df["date_start"])
     df["campanha"] = df["campaign_name"]
 
-    def extrair_conversoes(actions):
+    def _somar(actions, tipos):
         if not isinstance(actions, list):
             return 0
-        alvo = {"lead", "purchase", "complete_registration", "offsite_conversion.fb_pixel_purchase"}
-        total = sum(int(float(a.get("value", 0))) for a in actions if a.get("action_type") in alvo)
-        return total
+        return sum(int(float(a.get("value", 0))) for a in actions if a.get("action_type") in tipos)
 
-    df["conversoes"] = df.get("actions", pd.Series([[]] * len(df))).apply(extrair_conversoes)
+    def extrair_conversoes(row):
+        actions = row.get("actions")
+        objetivo = row.get("optimization_goal")
+        tipos_do_objetivo = METAS_POR_OBJETIVO.get(objetivo)
+
+        if tipos_do_objetivo:
+            total = _somar(actions, tipos_do_objetivo)
+            if total > 0:
+                return total
+
+        # objetivo nao mapeado (ou mapeado mas sem esse action_type nos dados): usa o conjunto padrao
+        return _somar(actions, METAS_PADRAO)
+
+    if "optimization_goal" not in df.columns:
+        df["optimization_goal"] = None
+    df["conversoes"] = df.apply(extrair_conversoes, axis=1)
 
     df["ctr"] = (df["cliques"] / df["impressoes"].replace(0, pd.NA) * 100).fillna(0)
     df["cpc"] = (df["gasto"] / df["cliques"].replace(0, pd.NA)).fillna(0)
