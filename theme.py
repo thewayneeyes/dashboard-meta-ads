@@ -1,0 +1,417 @@
+"""Paleta e CSS global - identidade de agencia: neon, editorial, compacto (sem scroll)."""
+
+THEMES = {
+    "dark": {
+        "page": "#07060d",
+        "surface": "#0f0d1a",
+        "surface_2": "#171327",
+        "card": "rgba(23,19,39,0.72)",
+        "card_hover": "rgba(32,26,54,0.88)",
+        "border": "rgba(255,255,255,0.08)",
+        "border_strong": "rgba(167,139,250,0.45)",
+        "text_primary": "#ffffff",
+        "text_secondary": "#a29ec2",
+        "muted": "#736f8f",
+        "gridline": "rgba(255,255,255,0.05)",
+        "baseline": "rgba(255,255,255,0.12)",
+        "accent_1": "#a855f7",
+        "accent_2": "#f0399b",
+        "accent_3": "#ff8a3d",
+        "series_blue": "#a855f7",
+        "series_aqua": "#2dd4bf",
+        "series_pink": "#f0399b",
+        "good": "#2dd4bf",
+        "warning": "#fbbf24",
+        "critical": "#f0399b",
+        "glow_blue": "rgba(168,85,247,0.60)",
+        "glow_aqua": "rgba(45,212,191,0.50)",
+        "glow_pink": "rgba(240,57,155,0.50)",
+    },
+    "light": {
+        "page": "#faf8ff",
+        "surface": "#ffffff",
+        "surface_2": "#ffffff",
+        "card": "rgba(255,255,255,0.80)",
+        "card_hover": "#ffffff",
+        "border": "rgba(30,15,60,0.09)",
+        "border_strong": "rgba(147,51,234,0.40)",
+        "text_primary": "#140b26",
+        "text_secondary": "#5f5580",
+        "muted": "#857da3",
+        "gridline": "rgba(20,11,38,0.06)",
+        "baseline": "rgba(20,11,38,0.15)",
+        "accent_1": "#9333ea",
+        "accent_2": "#db2777",
+        "accent_3": "#ea580c",
+        "series_blue": "#9333ea",
+        "series_aqua": "#0d9488",
+        "series_pink": "#db2777",
+        "good": "#0d9488",
+        "warning": "#b45309",
+        "critical": "#db2777",
+        "glow_blue": "rgba(147,51,234,0.28)",
+        "glow_aqua": "rgba(13,148,136,0.24)",
+        "glow_pink": "rgba(219,39,119,0.24)",
+    },
+}
+
+
+def get_palette(theme: str) -> dict:
+    return THEMES.get(theme, THEMES["dark"])
+
+
+def global_css(theme: str) -> str:
+    p = get_palette(theme)
+    return f"""
+    <style>
+    html, body, [class*="css"] {{
+        font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    }}
+
+    /* ---- compacta o layout: cabe tudo em uma tela ---- */
+    [data-testid="stMainBlockContainer"] {{
+        padding-top: 1.6rem;
+        padding-bottom: 0.6rem;
+        padding-left: 2.6rem;
+        padding-right: 2.6rem;
+        max-width: 100%;
+        position: relative;
+        z-index: 1;
+    }}
+    [data-testid="stVerticalBlock"] {{ gap: 0.6rem; }}
+    [data-testid="stToolbar"], [data-testid="stDecoration"], footer {{ display: none !important; }}
+    [data-testid="stHeader"] {{ background: transparent; height: 0; }}
+
+    [data-testid="stAppViewContainer"] {{
+        background: {p['page']};
+    }}
+    [data-testid="stAppViewContainer"]::before {{
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        background:
+            radial-gradient(900px circle at 0% -10%, {p['glow_blue']}, transparent 55%),
+            radial-gradient(700px circle at 100% 0%, {p['glow_pink']}, transparent 50%),
+            radial-gradient(700px circle at 60% 110%, {p['glow_aqua']}, transparent 50%);
+        opacity: 0.42;
+        animation: drift 20s ease-in-out infinite alternate;
+    }}
+    @keyframes drift {{
+        0%   {{ transform: translate3d(0,0,0) scale(1); }}
+        100% {{ transform: translate3d(-2%, 2%, 0) scale(1.08); }}
+    }}
+    @media (prefers-reduced-motion: reduce) {{
+        [data-testid="stAppViewContainer"]::before {{ animation: none; }}
+    }}
+
+    [data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"] {{ display: none !important; }}
+    .stApp, .stMarkdown, p, span, label {{ color: {p['text_primary']}; }}
+
+    /* ---- barra de controles do topo (discreta) ---- */
+    .topbar-anchor {{ display: none; }}
+    .st-key-topbar {{ margin-bottom: 2px; }}
+    .st-key-topbar [data-testid="stHorizontalBlock"] {{
+        gap: 8px;
+        align-items: center;
+    }}
+    /* botoes e selectbox: fantasma, so contorno tenue */
+    .st-key-topbar button,
+    .st-key-topbar [data-testid="stSelectbox"] .react-aria-ComboBox > div {{
+        background: transparent !important;
+        border: 1px solid {p['border']} !important;
+        border-radius: 10px !important;
+        min-height: 32px !important;
+        height: 32px !important;
+        color: {p['muted']} !important;
+        transition: color 180ms ease, border-color 180ms ease, background 180ms ease;
+    }}
+    .st-key-topbar [data-testid="stPopoverButton"] {{
+        background: transparent !important;
+        background-color: transparent !important;
+        border: 1px solid {p['border']} !important;
+        border-radius: 10px !important;
+        min-height: 32px !important;
+        height: 32px !important;
+        color: {p['muted']} !important;
+    }}
+    .st-key-topbar [data-testid="stPopoverButton"]:hover {{
+        background-color: {p['card']} !important;
+        border-color: {p['border_strong']} !important;
+        color: {p['text_primary']} !important;
+    }}
+    .st-key-topbar button:hover,
+    .st-key-topbar [data-testid="stSelectbox"] .react-aria-ComboBox > div:hover {{
+        color: {p['text_primary']} !important;
+        border-color: {p['border_strong']} !important;
+        background: {p['card']} !important;
+    }}
+    .st-key-topbar button p,
+    .st-key-topbar button div,
+    .st-key-topbar input {{
+        font-size: 11.5px !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.04em;
+        color: {p['muted']} !important;
+    }}
+    .st-key-topbar button:hover p,
+    .st-key-topbar button:hover div {{ color: {p['text_primary']} !important; }}
+    .st-key-topbar input {{ height: 30px !important; }}
+    .st-key-topbar svg {{ width: 14px; height: 14px; opacity: 0.6; }}
+    .st-key-topbar [data-testid="stSelectbox"] label {{ display: none !important; }}
+    [data-testid="stCaptionContainer"] {{ color: {p['muted']} !important; font-size: 12px; }}
+
+    /* ---- header editorial ---- */
+    .hero-row {{
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 20px;
+        flex-wrap: wrap;
+        border-bottom: 1px solid {p['border']};
+        padding-bottom: 14px;
+        margin-bottom: 16px;
+    }}
+    .kicker {{
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: {p['accent_2']};
+        margin-bottom: 6px;
+    }}
+    .kicker::before {{
+        content: "";
+        width: 8px; height: 8px;
+        border-radius: 50%;
+        background: {p['accent_2']};
+        box-shadow: 0 0 0 0 {p['glow_pink']};
+        animation: pulse 2.4s ease-out infinite;
+    }}
+    @keyframes pulse {{
+        0%   {{ box-shadow: 0 0 0 0 {p['glow_pink']}; }}
+        70%  {{ box-shadow: 0 0 0 10px rgba(0,0,0,0); }}
+        100% {{ box-shadow: 0 0 0 0 rgba(0,0,0,0); }}
+    }}
+    .hero-title {{
+        font-size: clamp(30px, 3.6vw, 52px);
+        font-weight: 900;
+        line-height: 0.98;
+        letter-spacing: -0.035em;
+        margin: 0;
+        text-transform: uppercase;
+        background: linear-gradient(96deg, {p['text_primary']} 18%, {p['accent_1']} 58%, {p['accent_2']} 82%, {p['accent_3']} 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }}
+    .hero-meta {{
+        text-align: right;
+        color: {p['text_secondary']};
+        font-size: 12px;
+        line-height: 1.7;
+    }}
+    .hero-meta b {{ color: {p['text_primary']}; font-weight: 700; }}
+
+    /* ---- KPI row ---- */
+    .kpi-grid {{
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 12px;
+        margin-bottom: 14px;
+    }}
+    @media (max-width: 1400px) {{ .kpi-grid {{ grid-template-columns: repeat(3, 1fr); }} }}
+    @media (max-width: 760px)  {{ .kpi-grid {{ grid-template-columns: repeat(2, 1fr); }} }}
+
+    .kpi-card {{
+        background: {p['card']};
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        border: 1px solid {p['border']};
+        border-radius: 16px;
+        padding: 15px 16px 16px 16px;
+        position: relative;
+        overflow: hidden;
+        transition: transform 240ms cubic-bezier(.2,.8,.2,1), box-shadow 240ms ease, border-color 240ms ease, background 240ms ease;
+    }}
+    .kpi-card::after {{
+        content: "";
+        position: absolute;
+        top: -55%; right: -35%;
+        width: 150px; height: 150px;
+        background: radial-gradient(circle, {p['glow_blue']}, transparent 68%);
+        opacity: 0.55;
+        pointer-events: none;
+        transition: opacity 240ms ease;
+    }}
+    .kpi-card:hover {{
+        transform: translateY(-4px);
+        border-color: {p['border_strong']};
+        background: {p['card_hover']};
+        box-shadow: 0 18px 44px -14px {p['glow_blue']};
+    }}
+    .kpi-card:hover::after {{ opacity: 1; }}
+    .kpi-accent {{
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, {p['accent_1']}, {p['accent_2']}, {p['accent_3']});
+    }}
+    .kpi-label {{
+        color: {p['text_secondary']};
+        font-size: 10.5px;
+        font-weight: 800;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+        margin-bottom: 9px;
+        position: relative; z-index: 1;
+    }}
+    .kpi-value {{
+        font-size: clamp(20px, 1.75vw, 30px);
+        font-weight: 900;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+        letter-spacing: -0.025em;
+        color: {p['text_primary']};
+        position: relative; z-index: 1;
+    }}
+
+    /* ---- tabs ---- */
+    .stTabs [data-baseweb="tab-list"] {{
+        gap: 5px;
+        background: {p['card']};
+        border: 1px solid {p['border']};
+        border-radius: 13px;
+        padding: 5px;
+        backdrop-filter: blur(18px);
+        width: fit-content;
+    }}
+    .stTabs [data-baseweb="tab"] {{
+        height: 36px;
+        border-radius: 9px;
+        color: {p['text_secondary']};
+        font-weight: 700;
+        font-size: 13px;
+        letter-spacing: 0.02em;
+        padding: 0 18px;
+        transition: color 180ms ease, background 180ms ease;
+    }}
+    .stTabs [data-baseweb="tab"]:hover {{ color: {p['text_primary']}; }}
+    .stTabs [aria-selected="true"] {{
+        background: linear-gradient(118deg, {p['accent_1']}, {p['accent_2']});
+        color: #ffffff !important;
+        box-shadow: 0 6px 20px -7px {p['glow_blue']};
+    }}
+    .stTabs [data-baseweb="tab-highlight"], .stTabs [data-baseweb="tab-border"] {{ display: none; }}
+    .stTabs [data-baseweb="tab-panel"] {{ padding-top: 12px; }}
+
+    /* ---- chart shell ---- */
+    .chart-shell {{
+        background: {p['card']};
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        border: 1px solid {p['border']};
+        border-radius: 18px;
+        padding: 2px;
+    }}
+    .chart-head {{
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        padding: 13px 18px 9px 18px;
+    }}
+    .chart-title {{
+        color: {p['text_primary']};
+        font-size: 15px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+    }}
+    .chart-subtitle {{
+        color: {p['muted']};
+        font-size: 12px;
+    }}
+
+    [data-testid="stDataFrame"] {{
+        border-radius: 14px;
+        overflow: hidden;
+        border: 1px solid {p['border']};
+    }}
+    /* ---- modal de conexao: segue o tema atual ---- */
+    [data-testid="stDialog"] [role="dialog"],
+    [data-testid="stDialog"] > div > div {{
+        background: {p['surface_2']} !important;
+        border: 1px solid {p['border']} !important;
+        border-radius: 18px !important;
+        box-shadow: 0 30px 70px -20px rgba(0,0,0,0.55) !important;
+    }}
+    [data-testid="stDialog"] [role="dialog"] h1,
+    [data-testid="stDialog"] [role="dialog"] h2,
+    [data-testid="stDialog"] [role="dialog"] h3,
+    [data-testid="stDialog"] [role="dialog"] p,
+    [data-testid="stDialog"] [role="dialog"] label,
+    [data-testid="stDialog"] [role="dialog"] li {{
+        color: {p['text_primary']} !important;
+    }}
+    [data-testid="stDialog"] [role="dialog"] [data-testid="stWidgetLabel"] p {{
+        color: {p['text_secondary']} !important;
+        font-size: 12px !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }}
+    [data-testid="stDialog"] [role="dialog"] input {{
+        color: {p['text_primary']} !important;
+        background: {p['surface']} !important;
+    }}
+    [data-testid="stDialog"] [role="dialog"] button[kind="primary"],
+    [data-testid="stDialog"] [role="dialog"] button[kind="primary"] p {{
+        background: linear-gradient(118deg, {p['accent_1']}, {p['accent_2']}) !important;
+        color: #ffffff !important;
+        border: none !important;
+    }}
+    [data-testid="stDialog"] [role="dialog"] button[kind="primary"] p {{
+        background: none !important;
+    }}
+    /* botao secundario ("Testar conexao") */
+    [data-testid="stDialog"] [role="dialog"] button[kind="secondary"] {{
+        background: {p['surface']} !important;
+        border: 1px solid {p['border_strong']} !important;
+    }}
+    [data-testid="stDialog"] [role="dialog"] button[kind="secondary"] p,
+    [data-testid="stDialog"] [role="dialog"] button[kind="secondary"] div {{
+        color: {p['text_primary']} !important;
+    }}
+    /* select / combobox (ex: "Conta do cliente") */
+    [data-testid="stDialog"] [role="dialog"] input {{
+        background: {p['surface']} !important;
+        border-color: {p['border_strong']} !important;
+    }}
+    /* menu suspenso do select: renderiza em portal fora do dialog (react-aria) */
+    [role="listbox"] {{
+        background: {p['surface_2']} !important;
+        border: 1px solid {p['border_strong']} !important;
+        border-radius: 12px !important;
+        box-shadow: 0 20px 50px -14px rgba(0,0,0,0.5) !important;
+    }}
+    div:has(> [role="listbox"]) {{
+        background: {p['surface_2']} !important;
+    }}
+    [role="option"] {{
+        background: transparent !important;
+        color: {p['text_primary']} !important;
+    }}
+    [role="option"]:hover,
+    [role="option"][aria-selected="true"] {{
+        background: {p['card_hover']} !important;
+        color: {p['text_primary']} !important;
+    }}
+
+    iframe {{ display: block; }}
+    </style>
+    """
