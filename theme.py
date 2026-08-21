@@ -259,14 +259,12 @@ def global_css(theme: str) -> str:
         100% {{ box-shadow: 0 0 0 0 rgba(0,0,0,0); }}
     }}
     .hero-title {{
-        display: inline-block;
         position: relative;
         font-size: clamp(24px, 3vw, 48px);
         font-weight: 900;
         line-height: 0.98;
         letter-spacing: -0.035em;
         margin: 0;
-        padding-bottom: 0.16em;
         text-transform: uppercase;
         color: {p['text_primary']};
     }}
@@ -274,7 +272,7 @@ def global_css(theme: str) -> str:
         content: "";
         position: absolute;
         left: 2px; right: 6%;
-        bottom: 0;
+        bottom: -8px;
         height: 0.11em;
         min-height: 4px;
         border-radius: 3px;
