@@ -390,9 +390,9 @@ def global_css(theme: str) -> str:
     }}
     .stTabs [role="tab"]:hover {{ color: {p['text_primary']}; }}
     .stTabs [role="tab"][aria-selected="true"] {{
-        background: linear-gradient(118deg, {p['accent_1']}, {p['accent_2']});
-        color: #ffffff !important;
-        box-shadow: 0 6px 20px -7px {p['glow_blue']};
+        background: {p['marca_amarelo']};
+        color: #14110a !important;
+        box-shadow: 0 6px 20px -7px {p['marca_glow']};
     }}
     .stTabs [role="tabpanel"] {{ padding-top: clamp(4px, 1vh, 10px); }}
 
@@ -465,8 +465,8 @@ def global_css(theme: str) -> str:
     }}
     [data-testid="stDialog"] [role="dialog"] button[kind="primary"],
     [data-testid="stDialog"] [role="dialog"] button[kind="primary"] p {{
-        background: linear-gradient(118deg, {p['accent_1']}, {p['accent_2']}) !important;
-        color: #ffffff !important;
+        background: {p['marca_amarelo']} !important;
+        color: #14110a !important;
         border: none !important;
     }}
     [data-testid="stDialog"] [role="dialog"] button[kind="primary"] p {{
