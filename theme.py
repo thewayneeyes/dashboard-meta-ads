@@ -411,6 +411,21 @@ def global_css(theme: str) -> str:
         border-radius: 18px;
         padding: 2px;
     }}
+    /* faixa dos toggles Gasto/Conversoes - mini cartao proprio, mesmo visual do
+       chart-shell, encaixado logo abaixo do titulo (em vez de boiar solto na pagina) */
+    .st-key-toggles_tendencia {{
+        background: {p['card']};
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        border: 1px solid {p['border']};
+        border-radius: 14px;
+        padding: 8px 14px 4px 14px;
+        margin: -2px 0 8px 0;
+    }}
+    .st-key-toggles_tendencia [data-testid="stHorizontalBlock"] {{
+        align-items: center;
+        gap: 4px;
+    }}
     .chart-head {{
         display: flex;
         align-items: baseline;

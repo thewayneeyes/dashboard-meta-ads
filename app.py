@@ -638,11 +638,12 @@ def main():
 
     with tab_tendencia:
         chart_shell_start("Gasto e Conversões", "Evolução diária — desmarque uma métrica pra tirá-la do painel inteiro")
-        col_tg1, col_tg2, _ = st.columns([1, 1.4, 5])
-        with col_tg1:
-            mostrar_gasto = st.toggle("Gasto", value=mostrar_gasto, key="toggle_gasto")
-        with col_tg2:
-            mostrar_conversoes = st.toggle("Conversões", value=mostrar_conversoes, key="toggle_conversoes")
+        with st.container(key="toggles_tendencia"):
+            col_tg1, col_tg2, _ = st.columns([1, 1.4, 5])
+            with col_tg1:
+                mostrar_gasto = st.toggle("Gasto", value=mostrar_gasto, key="toggle_gasto")
+            with col_tg2:
+                mostrar_conversoes = st.toggle("Conversões", value=mostrar_conversoes, key="toggle_conversoes")
         components.html(
             trend_and_conversions(
                 datas_fmt,
