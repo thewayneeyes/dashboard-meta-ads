@@ -549,6 +549,16 @@ def global_css(theme: str) -> str:
         border-color: {p['border_strong']} !important;
         color: {p['text_primary']} !important;
     }}
+    [data-testid="stPopoverBody"] input::placeholder {{
+        color: {p['muted']} !important;
+        opacity: 1 !important;
+    }}
+    /* caixa do combobox/multiselect (o campo inteiro, nao so o <input> de digitar) */
+    [data-testid="stPopoverBody"] [data-baseweb="select"],
+    [data-testid="stPopoverBody"] [data-testid="stMultiSelect"] > div > div {{
+        background: {p['surface']} !important;
+        border-color: {p['border_strong']} !important;
+    }}
     /* calendario que abre ao clicar no campo de data */
     [data-baseweb="calendar"] {{
         background: {p['surface_2']} !important;
