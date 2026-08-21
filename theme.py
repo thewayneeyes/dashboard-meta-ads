@@ -8,26 +8,29 @@ THEMES = {
         "card": "rgba(23,19,39,0.72)",
         "card_hover": "rgba(32,26,54,0.88)",
         "border": "rgba(255,255,255,0.08)",
-        "border_strong": "rgba(167,139,250,0.45)",
+        "border_strong": "rgba(239,209,0,0.45)",
         "text_primary": "#ffffff",
         "text_secondary": "#a29ec2",
         "muted": "#736f8f",
         "gridline": "rgba(255,255,255,0.05)",
         "baseline": "rgba(255,255,255,0.12)",
-        "accent_1": "#a855f7",
-        "accent_2": "#f0399b",
-        "accent_3": "#ff8a3d",
-        "series_blue": "#a855f7",
+        # amarelo da marca tambem nos botoes e na linha de Gasto do grafico (a pedido do
+        # cliente) - accent_2 fica um preto/carvao pra dar profundidade ao degrade dos
+        # botoes (amarelo -> preto), em vez de duas cores amarelas iguais
+        "accent_1": "#efd100",
+        "accent_2": "#1a1a1a",
+        "accent_3": "#efd100",
+        "series_blue": "#efd100",
         "series_aqua": "#2dd4bf",
         "series_pink": "#f0399b",
         "good": "#2dd4bf",
         "warning": "#fbbf24",
         "critical": "#f0399b",
-        "glow_blue": "rgba(168,85,247,0.60)",
+        "glow_blue": "rgba(239,209,0,0.55)",
         "glow_aqua": "rgba(45,212,191,0.50)",
         "glow_pink": "rgba(240,57,155,0.50)",
-        # marca da agencia (amarelo/preto) - usado so em elementos decorativos de fonte
-        # e layout (titulo, kicker, barra de destaque do KPI), nunca em botao nem grafico
+        # marca da agencia (amarelo/preto) - usado em elementos decorativos de fonte e
+        # layout (titulo, kicker, barra de destaque do KPI)
         "marca_amarelo": "#efd100",
         "marca_glow": "rgba(239,209,0,0.45)",
     },
@@ -38,29 +41,29 @@ THEMES = {
         "card": "rgba(255,255,255,0.80)",
         "card_hover": "#ffffff",
         "border": "rgba(30,15,60,0.09)",
-        "border_strong": "rgba(147,51,234,0.40)",
+        "border_strong": "rgba(184,134,11,0.45)",
         "text_primary": "#140b26",
         "text_secondary": "#5f5580",
         "muted": "#857da3",
         "gridline": "rgba(20,11,38,0.06)",
         "baseline": "rgba(20,11,38,0.15)",
-        "accent_1": "#9333ea",
-        "accent_2": "#db2777",
-        "accent_3": "#ea580c",
-        "series_blue": "#9333ea",
+        "accent_1": "#b8860b",
+        "accent_2": "#141414",
+        "accent_3": "#b8860b",
+        "series_blue": "#b8860b",
         "series_aqua": "#0d9488",
         "series_pink": "#db2777",
         "good": "#0d9488",
         "warning": "#b45309",
         "critical": "#db2777",
-        "glow_blue": "rgba(147,51,234,0.28)",
+        "glow_blue": "rgba(184,134,11,0.30)",
         "glow_aqua": "rgba(13,148,136,0.24)",
         "glow_pink": "rgba(219,39,119,0.24)",
-        # amarelo puro da marca fica com contraste ruim em fundo branco - usa um
-        # dourado mais fechado aqui pra continuar legivel (mesma logica do resto do
-        # tema: cada modo tem seu proprio tom, nunca a mesma cor crua nos dois)
-        "marca_amarelo": "#9c7d00",
-        "marca_glow": "rgba(156,125,0,0.18)",
+        # amarelo puro da marca fica com contraste ruim em fundo branco - usa um dourado
+        # mais vivo (nao mais um tom apagado tipo "amarelo coco") que ainda continua
+        # legivel: cada modo tem seu proprio tom, nunca a mesma cor crua nos dois
+        "marca_amarelo": "#b8860b",
+        "marca_glow": "rgba(184,134,11,0.20)",
     },
 }
 

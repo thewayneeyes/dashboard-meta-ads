@@ -601,7 +601,7 @@ def main():
         tabela = tabela_campanhas(df, alcance_exato)
         todas_colunas = list(tabela.columns)
 
-        col_filtro, _ = st.columns([1, 4])
+        col_filtro, col_reset, _ = st.columns([1.3, 1.5, 3])
         with col_filtro:
             with st.popover("Ocultar colunas", use_container_width=True):
                 st.caption("Desmarque o que não quer ver na tabela")
@@ -610,9 +610,21 @@ def main():
                     for coluna in todas_colunas
                     if coluna != "Campanha" and not st.checkbox(coluna, value=True, key=f"col_{coluna}")
                 ]
+        with col_reset:
+            # a propria tabela tem um menu nativo (icone do olho no cabecalho da coluna)
+            # que tambem esconde colunas, mas sem jeito nenhum de trazer de volta pela
+            # interface - trocar a "key" reinicia esse estado interno da tabela do zero
+            if st.button("↺ Restaurar tabela", key="btn_reset_tabela", type="tertiary"):
+                st.session_state["tabela_reset"] = st.session_state.get("tabela_reset", 0) + 1
+                st.rerun()
 
         colunas_visiveis = [c for c in todas_colunas if c not in ocultas]
-        st.dataframe(tabela[colunas_visiveis], use_container_width=True, hide_index=True)
+        st.dataframe(
+            tabela[colunas_visiveis],
+            use_container_width=True,
+            hide_index=True,
+            key=f"grid_tabela_{st.session_state.get('tabela_reset', 0)}",
+        )
 
 
 if __name__ == "__main__":

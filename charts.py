@@ -39,7 +39,12 @@ def trend_and_conversions(dates: list[str], gasto: list[float], conversoes: list
         backgroundColor: 'transparent',
         animationDuration: 1400,
         animationEasing: 'cubicOut',
-        grid: {{ left: 56, right: 20, top: 24, bottom: 6, containLabel: false }},
+        legend: {{
+          show: true, top: 0, right: 4, itemWidth: 14, itemHeight: 3, icon: 'roundRect',
+          textStyle: {{ color: p.text_secondary, fontSize: 12 }},
+          inactiveColor: p.muted
+        }},
+        grid: {{ left: 56, right: 20, top: 32, bottom: 6, containLabel: false }},
         tooltip: {{
           trigger: 'axis',
           backgroundColor: p.surface_2,
@@ -85,7 +90,12 @@ def trend_and_conversions(dates: list[str], gasto: list[float], conversoes: list
         animationDuration: 1400,
         animationDelay: 200,
         animationEasing: 'cubicOut',
-        grid: {{ left: 56, right: 20, top: 10, bottom: 22, containLabel: false }},
+        legend: {{
+          show: true, top: 0, right: 4, itemWidth: 14, itemHeight: 3, icon: 'roundRect',
+          textStyle: {{ color: p.text_secondary, fontSize: 12 }},
+          inactiveColor: p.muted
+        }},
+        grid: {{ left: 56, right: 20, top: 18, bottom: 22, containLabel: false }},
         tooltip: {{
           trigger: 'axis',
           backgroundColor: p.surface_2,
