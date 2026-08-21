@@ -232,11 +232,33 @@ def status_para_url(selecionados: list[str]) -> str:
     return ",".join(_STATUS_URL[s] for s in selecionados if s in _STATUS_URL)
 
 
-def link_visualizacao_cliente(ad_account_id: str, status_selecionados: list[str] | None = None) -> str:
+HIDE_CAMPANHAS_PARAM = "ocultar"
+
+
+def campanhas_ocultas_da_url() -> set[str]:
+    """Quais campanhas ficam de fora de tudo (KPIs, graficos, tabela) - lido da URL. No
+    link travado do cliente final isso e fixo (a agencia decide na hora de gerar o link,
+    o cliente nao tem controle nenhum pra mudar ou ver o que foi escondido)."""
+    bruto = st.query_params.get(HIDE_CAMPANHAS_PARAM, "")
+    if not bruto:
+        return set()
+    return {nome for nome in bruto.split("||") if nome}
+
+
+def campanhas_ocultas_para_url(nomes: set[str] | list[str]) -> str:
+    return "||".join(sorted(nomes))
+
+
+def link_visualizacao_cliente(
+    ad_account_id: str,
+    status_selecionados: list[str] | None = None,
+    campanhas_ocultas: set[str] | None = None,
+) -> str:
     """Monta o link publico que, quando aberto, trava a tela nessa conta - sem mostrar as
     outras contas, sem token nenhum na URL (o token fica so no servidor). O status das
-    campanhas (ativas/desativadas) tambem fica travado nesse link, escolhido pela agencia
-    na hora de gerar - o cliente final so ve o que foi definido pra ele."""
+    campanhas (ativas/desativadas) e quais campanhas ficam de fora tambem ficam travados
+    nesse link, escolhidos pela agencia na hora de gerar - o cliente final so ve o que
+    foi definido pra ele."""
     try:
         host = st.context.headers.get("host", "")
     except Exception:
@@ -246,6 +268,8 @@ def link_visualizacao_cliente(ad_account_id: str, status_selecionados: list[str]
     )
     if status_selecionados:
         base += f"&{STATUS_VIEW_PARAM}={status_para_url(status_selecionados)}"
+    if campanhas_ocultas:
+        base += f"&{HIDE_CAMPANHAS_PARAM}={campanhas_ocultas_para_url(campanhas_ocultas)}"
     return base
 
 
@@ -301,13 +325,24 @@ def _secao_link_cliente(token: str):
     ad_account_id = ids[rotulos.index(escolha)]
 
     status_link = st.multiselect(
-        "Campanhas que esse cliente pode ver",
+        "Status das campanhas que esse cliente pode ver",
         STATUS_OPCOES,
         default=["Ativas"],
         key="status_link_cliente",
         help="Escolha aqui antes de copiar o link — depois de gerado, o cliente não consegue mudar isso.",
     )
-    st.code(link_visualizacao_cliente(ad_account_id, status_link), language=None)
+
+    campanhas_ocultas_conta = st.session_state.get(f"campanhas_ocultas_{ad_account_id}", set())
+    if campanhas_ocultas_conta:
+        st.caption(
+            f"🚫 {len(campanhas_ocultas_conta)} campanha(s) ocultada(s) na tela principal deste cliente "
+            "também ficam de fora do link (mude em 'Campanhas' na barra de cima, se quiser)."
+        )
+
+    st.code(
+        link_visualizacao_cliente(ad_account_id, status_link, campanhas_ocultas_conta),
+        language=None,
+    )
 
 
 def barra_controles(theme: str):
@@ -506,9 +541,39 @@ def main():
         )
         st.stop()
 
+    # filtro de campanhas especificas - a agencia tira campanhas pontuais (teste, sem
+    # relevancia pro cliente, etc) de TUDO no painel (KPIs, graficos, tabela). Fica
+    # travado no link do cliente final: a agencia decide o que ele ve, sem controle
+    # nenhum do lado dele.
+    todas_campanhas = sorted(df["campanha"].unique())
+    if conta_travada:
+        campanhas_ocultas = campanhas_ocultas_da_url() & set(todas_campanhas)
+    else:
+        chave_estado = f"campanhas_ocultas_{ad_account_id}"
+        anteriores = [c for c in st.session_state.get(chave_estado, set()) if c in todas_campanhas]
+        rotulo = f"Campanhas ({len(anteriores)} ocultas)" if anteriores else "Campanhas"
+        col_camp, _ = st.columns([1.4, 6])
+        with col_camp:
+            with st.popover(rotulo, use_container_width=True):
+                st.caption(
+                    "Campanhas marcadas aqui saem de tudo no painel — KPIs, gráficos e "
+                    "tabela — inclusive do link que for gerado pra esse cliente."
+                )
+                selecao = st.multiselect(
+                    "Ocultar estas campanhas", todas_campanhas, default=anteriores, key=f"ms_{chave_estado}"
+                )
+        campanhas_ocultas = set(selecao)
+        st.session_state[chave_estado] = campanhas_ocultas
+
+    if campanhas_ocultas:
+        df = df[~df["campanha"].isin(campanhas_ocultas)]
+        if df.empty:
+            st.warning("Todas as campanhas do período foram ocultadas no filtro de Campanhas.")
+            st.stop()
+
     if alcance_exato:
-        # a consulta de alcance exato busca TODAS as campanhas (antes do filtro de status
-        # acima) - sem isso, o alcance total ficaria contando campanhas desativadas que
+        # a consulta de alcance exato busca TODAS as campanhas (antes dos filtros acima)
+        # - sem isso, o alcance total ficaria contando campanhas desativadas/ocultadas que
         # ja foram excluidas de todo o resto, podendo ate superar as impressoes visiveis
         campanhas_visiveis = set(df["campanha"].unique())
         por_campanha_filtrado = {
