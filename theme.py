@@ -59,11 +59,13 @@ THEMES = {
         "glow_blue": "rgba(184,134,11,0.30)",
         "glow_aqua": "rgba(13,148,136,0.24)",
         "glow_pink": "rgba(219,39,119,0.24)",
-        # amarelo puro da marca fica com contraste ruim em fundo branco - usa um dourado
-        # mais vivo (nao mais um tom apagado tipo "amarelo coco") que ainda continua
-        # legivel: cada modo tem seu proprio tom, nunca a mesma cor crua nos dois
-        "marca_amarelo": "#b8860b",
-        "marca_glow": "rgba(184,134,11,0.20)",
+        # amarelo puro da marca so aparece em elementos decorativos SEM texto em cima
+        # (pontinho do kicker, sublinhado do titulo, barra do KPI, glow de fundo) -
+        # exatamente como a propria logo da Vanti resolve isso (amarelo so no fundo
+        # escuro; no fundo claro ela usa preto). Sem texto amarelo, pode usar a cor
+        # crua da marca sem risco de ficar ilegivel.
+        "marca_amarelo": "#efd100",
+        "marca_glow": "rgba(239,209,0,0.35)",
     },
 }
 
@@ -240,7 +242,7 @@ def global_css(theme: str) -> str:
         font-weight: 800;
         letter-spacing: 0.22em;
         text-transform: uppercase;
-        color: {p['marca_amarelo']};
+        color: {p['text_secondary']};
         margin-bottom: 6px;
     }}
     .kicker::before {{
@@ -257,16 +259,26 @@ def global_css(theme: str) -> str:
         100% {{ box-shadow: 0 0 0 0 rgba(0,0,0,0); }}
     }}
     .hero-title {{
+        display: inline-block;
+        position: relative;
         font-size: clamp(24px, 3vw, 48px);
         font-weight: 900;
         line-height: 0.98;
         letter-spacing: -0.035em;
         margin: 0;
+        padding-bottom: 0.16em;
         text-transform: uppercase;
-        background: linear-gradient(96deg, {p['text_primary']} 22%, {p['marca_amarelo']} 68%);
-        -webkit-background-clip: text;
-        background-clip: text;
-        color: transparent;
+        color: {p['text_primary']};
+    }}
+    .hero-title::after {{
+        content: "";
+        position: absolute;
+        left: 2px; right: 6%;
+        bottom: 0;
+        height: 0.11em;
+        min-height: 4px;
+        border-radius: 3px;
+        background: {p['marca_amarelo']};
     }}
     .hero-meta {{
         text-align: right;
