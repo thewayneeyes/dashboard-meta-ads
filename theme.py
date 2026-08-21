@@ -26,6 +26,10 @@ THEMES = {
         "glow_blue": "rgba(168,85,247,0.60)",
         "glow_aqua": "rgba(45,212,191,0.50)",
         "glow_pink": "rgba(240,57,155,0.50)",
+        # marca da agencia (amarelo/preto) - usado so em elementos decorativos de fonte
+        # e layout (titulo, kicker, barra de destaque do KPI), nunca em botao nem grafico
+        "marca_amarelo": "#efd100",
+        "marca_glow": "rgba(239,209,0,0.45)",
     },
     "light": {
         "page": "#faf8ff",
@@ -52,6 +56,11 @@ THEMES = {
         "glow_blue": "rgba(147,51,234,0.28)",
         "glow_aqua": "rgba(13,148,136,0.24)",
         "glow_pink": "rgba(219,39,119,0.24)",
+        # amarelo puro da marca fica com contraste ruim em fundo branco - usa um
+        # dourado mais fechado aqui pra continuar legivel (mesma logica do resto do
+        # tema: cada modo tem seu proprio tom, nunca a mesma cor crua nos dois)
+        "marca_amarelo": "#9c7d00",
+        "marca_glow": "rgba(156,125,0,0.18)",
     },
 }
 
@@ -93,7 +102,7 @@ def global_css(theme: str) -> str:
         pointer-events: none;
         background:
             radial-gradient(900px circle at 0% -10%, {p['glow_blue']}, transparent 55%),
-            radial-gradient(700px circle at 100% 0%, {p['glow_pink']}, transparent 50%),
+            radial-gradient(700px circle at 100% 0%, {p['marca_glow']}, transparent 50%),
             radial-gradient(700px circle at 60% 110%, {p['glow_aqua']}, transparent 50%);
         opacity: 0.42;
         animation: drift 20s ease-in-out infinite alternate;
@@ -228,19 +237,19 @@ def global_css(theme: str) -> str:
         font-weight: 800;
         letter-spacing: 0.22em;
         text-transform: uppercase;
-        color: {p['accent_2']};
+        color: {p['marca_amarelo']};
         margin-bottom: 6px;
     }}
     .kicker::before {{
         content: "";
         width: 8px; height: 8px;
         border-radius: 50%;
-        background: {p['accent_2']};
-        box-shadow: 0 0 0 0 {p['glow_pink']};
+        background: {p['marca_amarelo']};
+        box-shadow: 0 0 0 0 {p['marca_glow']};
         animation: pulse 2.4s ease-out infinite;
     }}
     @keyframes pulse {{
-        0%   {{ box-shadow: 0 0 0 0 {p['glow_pink']}; }}
+        0%   {{ box-shadow: 0 0 0 0 {p['marca_glow']}; }}
         70%  {{ box-shadow: 0 0 0 10px rgba(0,0,0,0); }}
         100% {{ box-shadow: 0 0 0 0 rgba(0,0,0,0); }}
     }}
@@ -251,7 +260,7 @@ def global_css(theme: str) -> str:
         letter-spacing: -0.035em;
         margin: 0;
         text-transform: uppercase;
-        background: linear-gradient(96deg, {p['text_primary']} 14%, {p['accent_1']} 40%, {p['accent_2']} 58%, #efd100 74%);
+        background: linear-gradient(96deg, {p['text_primary']} 22%, {p['marca_amarelo']} 68%);
         -webkit-background-clip: text;
         background-clip: text;
         color: transparent;
@@ -274,11 +283,11 @@ def global_css(theme: str) -> str:
     /* ---- KPI row ---- */
     .kpi-grid {{
         display: grid;
-        grid-template-columns: repeat(6, 1fr);
+        grid-template-columns: repeat(5, 1fr);
         gap: 10px;
         margin-bottom: clamp(6px, 1.4vh, 14px);
     }}
-    @media (max-width: 1400px) {{ .kpi-grid {{ grid-template-columns: repeat(3, 1fr); }} }}
+    @media (max-width: 1200px) {{ .kpi-grid {{ grid-template-columns: repeat(3, 1fr); }} }}
     @media (max-width: 760px)  {{ .kpi-grid {{ grid-template-columns: repeat(2, 1fr); }} }}
 
     .kpi-card {{
@@ -313,7 +322,7 @@ def global_css(theme: str) -> str:
         position: absolute;
         top: 0; left: 0; right: 0;
         height: 2px;
-        background: linear-gradient(90deg, {p['accent_1']}, {p['accent_2']}, {p['accent_3']});
+        background: linear-gradient(90deg, {p['text_primary']}, {p['marca_amarelo']});
     }}
     .kpi-label {{
         color: {p['text_secondary']};

@@ -7,7 +7,10 @@ from urllib3.util.retry import Retry
 GRAPH_API_VERSION = "v21.0"
 BASE_URL = f"https://graph.facebook.com/{GRAPH_API_VERSION}"
 
-FIELDS = "campaign_id,campaign_name,spend,impressions,reach,clicks,ctr,cpc,cpm,actions,optimization_goal,date_start,date_stop"
+FIELDS = (
+    "campaign_id,campaign_name,spend,impressions,reach,clicks,ctr,cpc,cpm,actions,"
+    "optimization_goal,instagram_profile_visits,date_start,date_stop"
+)
 
 # "Veiculacao" no Gerenciador de Anuncios = effective_status da campanha. So existe no
 # endpoint de campanhas (/campaigns), nao no de insights - por isso precisa de uma
@@ -52,12 +55,12 @@ METAS_POR_OBJETIVO = {
     "APP_INSTALLS": ["omni_app_install", "mobile_app_install"],
     "THRUPLAY": ["video_view"],
     "VIDEO_VIEWS": ["video_view"],
-    # objetivos de alcance/exibicao pura: o "resultado" e alcance ou impressoes, nao uma
-    # acao de conversao - lista vazia = 0 conversoes de proposito (fica no gasto/CTR/CPM).
-    "REACH": [],
-    "IMPRESSIONS": [],
-    "BRAND_AWARENESS": [],
 }
+
+# objetivos de alcance/exibicao pura: no Gerenciador de Anuncios, a coluna "Resultados"
+# dessas campanhas E o proprio alcance (ex: "56.575 Alcance") - nao existe uma acao de
+# conversao separada, entao repetimos o alcance na coluna Conversoes pra bater 1:1.
+OBJETIVOS_DE_ALCANCE = {"REACH", "IMPRESSIONS", "BRAND_AWARENESS"}
 
 # Usado SO quando o optimization_goal nao esta mapeado acima (objetivo desconhecido/novo).
 # Tambem em ordem de prioridade - pega o primeiro que existir, nao soma.
@@ -175,17 +178,33 @@ def buscar_insights(ad_account_id: str, access_token: str, data_inicio: str, dat
         actions = row.get("actions")
         objetivo = row.get("optimization_goal")
 
-        if objetivo in METAS_POR_OBJETIVO:
-            # objetivo conhecido: usa exatamente a metrica que ele define (pode ser
-            # lista vazia de proposito, ex: campanhas de alcance -> 0 conversoes)
-            return _primeiro_que_existir(actions, METAS_POR_OBJETIVO[objetivo])
+        if objetivo in OBJETIVOS_DE_ALCANCE:
+            # campanha de alcance/exibicao: o "resultado" e o proprio alcance
+            return int(row.get("alcance") or 0)
 
-        # objetivo desconhecido/nao mapeado: tenta o conjunto padrao
+        if objetivo in METAS_POR_OBJETIVO:
+            valor = _primeiro_que_existir(actions, METAS_POR_OBJETIVO[objetivo])
+            if valor > 0:
+                return valor
+
+        # "Visitas ao perfil do Instagram" e um campo dedicado da API, fora do array
+        # "actions" - aparece em campanhas de trafego/engajamento sem objetivo mapeado
+        # (confirmado comparando com o Gerenciador de Anuncios: campo instagram_profile_visits
+        # bate com o numero da coluna Resultados, enquanto nenhum action_type batia).
+        visitas_perfil = int(float(row.get("instagram_profile_visits") or 0))
+        if visitas_perfil > 0:
+            return visitas_perfil
+
+        # objetivo desconhecido/sem nenhum dos anteriores: tenta o conjunto padrao
         return _primeiro_que_existir(actions, METAS_PADRAO)
 
     if "optimization_goal" not in df.columns:
         df["optimization_goal"] = None
     df["conversoes"] = df.apply(extrair_conversoes, axis=1)
+    # marca quais campanhas tem o alcance como "resultado" - usado depois pra sincronizar
+    # a coluna Conversoes com o alcance EXATO (sem a duplicacao entre dias que a soma
+    # diaria causa), em vez de deixar as duas colunas com numeros ligeiramente diferentes
+    df["eh_objetivo_alcance"] = df["optimization_goal"].isin(OBJETIVOS_DE_ALCANCE)
 
     df["ctr"] = (df["cliques"] / df["impressoes"].replace(0, pd.NA) * 100).fillna(0)
     df["cpc"] = (df["gasto"] / df["cliques"].replace(0, pd.NA)).fillna(0)
@@ -198,7 +217,10 @@ def buscar_insights(ad_account_id: str, access_token: str, data_inicio: str, dat
     df["status"] = df.get("campaign_id", "").map(status_por_id).fillna("Desconhecido")
 
     return df[
-        ["data", "campanha", "status", "gasto", "impressoes", "alcance", "cliques", "conversoes", "ctr", "cpc", "cpm", "cpa"]
+        [
+            "data", "campanha", "status", "gasto", "impressoes", "alcance", "cliques",
+            "conversoes", "ctr", "cpc", "cpm", "cpa", "eh_objetivo_alcance",
+        ]
     ]
 
 

@@ -53,4 +53,5 @@ def gerar_dados_diarios(data_inicio: pd.Timestamp, data_fim: pd.Timestamp, seed:
     df["cpc"] = np.where(df["cliques"] > 0, df["gasto"] / df["cliques"], 0)
     df["cpm"] = np.where(df["impressoes"] > 0, df["gasto"] / df["impressoes"] * 1000, 0)
     df["cpa"] = np.where(df["conversoes"] > 0, df["gasto"] / df["conversoes"], 0)
+    df["eh_objetivo_alcance"] = False
     return df

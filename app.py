@@ -154,6 +154,7 @@ def tabela_campanhas(df: pd.DataFrame, alcance_exato: dict | None = None) -> pd.
         alcance=("alcance", "sum"),
         cliques=("cliques", "sum"),
         conversoes=("conversoes", "sum"),
+        eh_alcance=("eh_objetivo_alcance", "any"),
     )
     if alcance_exato:
         # troca o somatorio diario (aproximado) pelo alcance exato por campanha, do
@@ -161,6 +162,12 @@ def tabela_campanhas(df: pd.DataFrame, alcance_exato: dict | None = None) -> pd.
         por_campanha = alcance_exato.get("por_campanha", {})
         agrupado["alcance"] = agrupado["campanha"].map(por_campanha).fillna(agrupado["alcance"]).astype(int)
 
+    # campanhas de alcance: o "resultado" e o proprio alcance - sincroniza as duas
+    # colunas pra nao ficarem com numeros ligeiramente diferentes entre si
+    agrupado.loc[agrupado["eh_alcance"], "conversoes"] = agrupado.loc[agrupado["eh_alcance"], "alcance"]
+    agrupado = agrupado.drop(columns=["eh_alcance"])
+
+    agrupado["frequencia"] = (agrupado["impressoes"] / agrupado["alcance"].replace(0, pd.NA)).fillna(0)
     agrupado["ctr"] = (agrupado["cliques"] / agrupado["impressoes"].replace(0, pd.NA) * 100).fillna(0)
     agrupado["cpc"] = (agrupado["gasto"] / agrupado["cliques"].replace(0, pd.NA)).fillna(0)
     agrupado["cpa"] = (agrupado["gasto"] / agrupado["conversoes"].replace(0, pd.NA)).fillna(0)
@@ -171,11 +178,17 @@ def tabela_campanhas(df: pd.DataFrame, alcance_exato: dict | None = None) -> pd.
     fmt["cpc"] = fmt["cpc"].apply(formatar_moeda)
     fmt["cpa"] = fmt["cpa"].apply(formatar_moeda)
     fmt["ctr"] = fmt["ctr"].apply(lambda v: f"{v:.2f}%")
+    fmt["frequencia"] = fmt["frequencia"].apply(lambda v: f"{v:.2f}")
     fmt["impressoes"] = fmt["impressoes"].apply(formatar_numero)
     fmt["alcance"] = fmt["alcance"].apply(formatar_numero)
     fmt["cliques"] = fmt["cliques"].apply(formatar_numero)
     fmt["conversoes"] = fmt["conversoes"].apply(formatar_numero)
-    fmt.columns = ["Campanha", "Status", "Gasto", "Impressões", "Alcance", "Cliques", "Conversões", "CTR", "CPC", "CPA"]
+    fmt = fmt[
+        ["campanha", "status", "gasto", "impressoes", "alcance", "frequencia", "cliques", "conversoes", "ctr", "cpc", "cpa"]
+    ]
+    fmt.columns = [
+        "Campanha", "Status", "Gasto", "Impressões", "Alcance", "Frequência", "Cliques", "Conversões", "CTR", "CPC", "CPA",
+    ]
     return fmt
 
 
@@ -200,17 +213,40 @@ def conta_da_url() -> str:
     return valor
 
 
-def link_visualizacao_cliente(ad_account_id: str) -> str:
+STATUS_VIEW_PARAM = "status"
+STATUS_OPCOES = ["Ativas", "Desativadas"]
+_STATUS_URL = {"Ativas": "ativas", "Desativadas": "desativadas"}
+_STATUS_URL_INVERSO = {v: k for k, v in _STATUS_URL.items()}
+
+
+def status_da_url() -> list[str]:
+    """Quais status (ativas/desativadas) considerar - lido da URL. Usado no link travado
+    do cliente final, que nao tem controle nenhum pra mudar isso (a agencia decide na
+    hora de gerar o link, e fica fixo dali pra frente)."""
+    bruto = st.query_params.get(STATUS_VIEW_PARAM, "")
+    selecionados = [_STATUS_URL_INVERSO[v] for v in bruto.split(",") if v in _STATUS_URL_INVERSO]
+    return selecionados or ["Ativas"]
+
+
+def status_para_url(selecionados: list[str]) -> str:
+    return ",".join(_STATUS_URL[s] for s in selecionados if s in _STATUS_URL)
+
+
+def link_visualizacao_cliente(ad_account_id: str, status_selecionados: list[str] | None = None) -> str:
     """Monta o link publico que, quando aberto, trava a tela nessa conta - sem mostrar as
-    outras contas, sem token nenhum na URL (o token fica so no servidor)."""
+    outras contas, sem token nenhum na URL (o token fica so no servidor). O status das
+    campanhas (ativas/desativadas) tambem fica travado nesse link, escolhido pela agencia
+    na hora de gerar - o cliente final so ve o que foi definido pra ele."""
     try:
         host = st.context.headers.get("host", "")
     except Exception:
         host = ""
-    if not host:
-        return f"?{CLIENT_VIEW_PARAM}={ad_account_id}"
-    esquema = "http" if host.startswith("localhost") else "https"
-    return f"{esquema}://{host}/?{CLIENT_VIEW_PARAM}={ad_account_id}"
+    base = f"?{CLIENT_VIEW_PARAM}={ad_account_id}" if not host else (
+        f"{'http' if host.startswith('localhost') else 'https'}://{host}/?{CLIENT_VIEW_PARAM}={ad_account_id}"
+    )
+    if status_selecionados:
+        base += f"&{STATUS_VIEW_PARAM}={status_para_url(status_selecionados)}"
+    return base
 
 
 @st.dialog("Conexão")
@@ -263,7 +299,15 @@ def _secao_link_cliente(token: str):
 
     escolha = st.selectbox("Cliente", rotulos, index=indice_padrao, key="sel_cliente_link")
     ad_account_id = ids[rotulos.index(escolha)]
-    st.code(link_visualizacao_cliente(ad_account_id), language=None)
+
+    status_link = st.multiselect(
+        "Campanhas que esse cliente pode ver",
+        STATUS_OPCOES,
+        default=["Ativas"],
+        key="status_link_cliente",
+        help="Escolha aqui antes de copiar o link — depois de gerado, o cliente não consegue mudar isso.",
+    )
+    st.code(link_visualizacao_cliente(ad_account_id, status_link), language=None)
 
 
 def barra_controles(theme: str):
@@ -278,8 +322,8 @@ def _controles(theme: str):
     # conecta automaticamente sempre que houver token - sem alternancia manual demo/real
     modo = "Conta real (Meta API)" if token else "Dados de demonstração"
 
-    col_logo, col_cliente, col_periodo, col_datas, col_conexao, col_tema = st.columns(
-        [1.7, 2.6, 1.5, 1.3, 1.0, 0.5]
+    col_logo, col_cliente, col_periodo, col_datas, col_status, col_conexao, col_tema = st.columns(
+        [1.6, 2.3, 1.3, 1.0, 1.1, 0.9, 0.5]
     )
 
     ad_account_id = None
@@ -363,6 +407,24 @@ def _controles(theme: str):
         else:
             data_ini, data_fim = calcular_intervalo(periodo)
 
+    with col_status:
+        if conta_travada:
+            # link do cliente final: status fixo, escolhido pela agencia na hora de
+            # gerar o link - sem controle nenhum aqui pro cliente mudar
+            status_selecionados = status_da_url()
+        else:
+            with st.popover("Status", use_container_width=True):
+                st.caption("Quais campanhas considerar no dashboard")
+                status_selecionados = st.multiselect(
+                    "Status",
+                    STATUS_OPCOES,
+                    default=st.session_state.get("status_filtro", ["Ativas"]),
+                    key="status_filtro",
+                    label_visibility="collapsed",
+                )
+            if not status_selecionados:
+                status_selecionados = ["Ativas"]
+
     with col_conexao:
         if not conta_travada:
             # visualizacao de cliente (link travado numa conta) nao tem acesso a Conexao
@@ -375,7 +437,7 @@ def _controles(theme: str):
             st.query_params["theme"] = "light" if theme == "dark" else "dark"
             st.rerun()
 
-    return theme, modo, ad_account_id, token, data_ini, data_fim, bool(conta_travada)
+    return theme, modo, ad_account_id, token, data_ini, data_fim, bool(conta_travada), status_selecionados
 
 
 def main():
@@ -385,7 +447,9 @@ def main():
     st.markdown(global_css(theme_inicial), unsafe_allow_html=True)
 
     st.markdown('<div class="topbar-anchor"></div>', unsafe_allow_html=True)
-    theme, modo, ad_account_id, access_token, data_ini, data_fim, conta_travada = barra_controles(theme_inicial)
+    theme, modo, ad_account_id, access_token, data_ini, data_fim, conta_travada, status_selecionados = (
+        barra_controles(theme_inicial)
+    )
 
     st.markdown(global_css(theme), unsafe_allow_html=True)
     palette = get_palette(theme)
@@ -424,16 +488,33 @@ def main():
         df = gerar_dados_diarios(pd.Timestamp(data_ini), pd.Timestamp(data_fim))
         fonte = "Dados de <b>demonstração</b>"
 
-    # campanhas pausadas/desativadas nao aparecem em nenhum lugar (tabela, graficos,
-    # totais) - filtra aqui uma unica vez pra tudo ficar consistente entre si
+    # filtro de status (Ativas/Desativadas) escolhido na barra de controles - ou fixo
+    # vindo da URL quando e o link travado de um cliente final. Aplica igual em tudo
+    # (tabela, graficos, totais) pra ficar tudo consistente entre si.
     total_campanhas_periodo = df["campanha"].nunique()
-    df = df[df["status"] == "Ativo"]
+    campanha_ativa = df["status"] == "Ativo"
+    mostrar = pd.Series(False, index=df.index)
+    if "Ativas" in status_selecionados:
+        mostrar |= campanha_ativa
+    if "Desativadas" in status_selecionados:
+        mostrar |= ~campanha_ativa
+    df = df[mostrar]
     if df.empty:
         st.warning(
-            f"Nenhuma campanha ativa no período — {total_campanhas_periodo} campanha(s) "
-            "teve(veram) veiculação, mas todas estão pausadas/desativadas."
+            f"Nenhuma campanha corresponde ao filtro de status selecionado — {total_campanhas_periodo} "
+            "campanha(s) teve(veram) veiculação no período."
         )
         st.stop()
+
+    if alcance_exato:
+        # a consulta de alcance exato busca TODAS as campanhas (antes do filtro de status
+        # acima) - sem isso, o alcance total ficaria contando campanhas desativadas que
+        # ja foram excluidas de todo o resto, podendo ate superar as impressoes visiveis
+        campanhas_visiveis = set(df["campanha"].unique())
+        por_campanha_filtrado = {
+            nome: valor for nome, valor in alcance_exato["por_campanha"].items() if nome in campanhas_visiveis
+        }
+        alcance_exato = {"total": sum(por_campanha_filtrado.values()), "por_campanha": por_campanha_filtrado}
 
     periodo_label = f"{data_ini.strftime('%d/%m/%Y')} — {data_fim.strftime('%d/%m/%Y')}"
     st.markdown(
@@ -445,24 +526,31 @@ def main():
     )
 
     gasto_total = df["gasto"].sum()
-    conversoes_total = int(df["conversoes"].sum())
     cliques_total = int(df["cliques"].sum())
     impressoes_total = int(df["impressoes"].sum())
     # alcance exato (consulta separada, sem duplicar gente entre dias) tem prioridade;
     # so cai no somatorio diario (aproximado) se aquela consulta falhar ou no modo demo
     alcance_total = alcance_exato["total"] if alcance_exato else int(df["alcance"].sum())
+
+    # campanhas de alcance: o "resultado" e o proprio alcance - troca a soma diaria
+    # (aproximada) pelo alcance exato por campanha, pra bater com a coluna Conversoes
+    # da tabela em vez de ficar um numero levemente diferente
+    campanhas_alcance = df.loc[df["eh_objetivo_alcance"], "campanha"].unique().tolist()
+    conversoes_total = int(df.loc[~df["campanha"].isin(campanhas_alcance), "conversoes"].sum())
+    if alcance_exato:
+        por_campanha_exato = alcance_exato.get("por_campanha", {})
+        conversoes_total += sum(por_campanha_exato.get(c, 0) for c in campanhas_alcance)
+    else:
+        conversoes_total += int(df.loc[df["campanha"].isin(campanhas_alcance), "conversoes"].sum())
+
     cpa = gasto_total / conversoes_total if conversoes_total else 0
-    ctr = cliques_total / impressoes_total * 100 if impressoes_total else 0
-    cpm = gasto_total / impressoes_total * 1000 if impressoes_total else 0
-    cpc = gasto_total / cliques_total if cliques_total else 0
 
     render_kpis([
+        ("Alcance", formatar_numero(alcance_total)),
+        ("Impressões", formatar_numero(impressoes_total)),
         ("Gasto Total", formatar_moeda(gasto_total)),
         ("Conversões", formatar_numero(conversoes_total)),
         ("Custo por Resultado", formatar_moeda(cpa)),
-        ("CTR", f"{ctr:.2f}%"),
-        ("CPM", formatar_moeda(cpm)),
-        ("CPC", formatar_moeda(cpc)),
     ])
 
     diario = df.groupby("data", as_index=False).agg(gasto=("gasto", "sum"), conversoes=("conversoes", "sum"))
