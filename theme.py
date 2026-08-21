@@ -450,6 +450,11 @@ def global_css(theme: str) -> str:
         overflow: hidden;
         border: 1px solid {p['border']};
     }}
+    /* remove o "Show/hide columns" nativo do canto da tabela - ja temos o nosso proprio
+       "Ocultar colunas" (que funciona nos dois sentidos, ao contrario desse) */
+    [data-testid="stDataFrame"] button[aria-label="Show/hide columns"] {{
+        display: none !important;
+    }}
     /* ---- modal de conexao: segue o tema atual ---- */
     [data-testid="stDialog"] [role="dialog"],
     [data-testid="stDialog"] > div > div {{
