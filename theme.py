@@ -170,6 +170,14 @@ def global_css(theme: str) -> str:
         -webkit-user-select: none !important;
         pointer-events: none !important;
     }}
+    /* toggle (Gasto/Conversoes): so tira a selecao de texto do rotulo, sem desativar
+       pointer-events no input - esse widget usa o proprio elemento <input> pra detectar
+       o clique internamente, entao "furar" ele pra baixo (como fizemos nos botoes)
+       quebra o toggle inteiro em vez de consertar. */
+    [data-testid="stCheckbox"] label {{
+        user-select: none !important;
+        -webkit-user-select: none !important;
+    }}
     .st-key-topbar [data-testid="stPopoverButton"] {{
         background: transparent !important;
         background-color: transparent !important;

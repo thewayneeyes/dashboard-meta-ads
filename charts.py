@@ -12,15 +12,38 @@ def _frame_reset() -> str:
     return "<style>html,body{margin:0;height:100%;overflow:hidden;}</style>"
 
 
-def trend_and_conversions(dates: list[str], gasto: list[float], conversoes: list[int], theme: str) -> str:
-    """Duas series de mesmo eixo x, sincronizadas por crosshair, sem eixo duplo (uma metrica por grafico)."""
+def trend_and_conversions(
+    dates: list[str],
+    gasto: list[float],
+    conversoes: list[int],
+    theme: str,
+    mostrar_gasto: bool = True,
+    mostrar_conversoes: bool = True,
+) -> str:
+    """Duas series de mesmo eixo x, sincronizadas por crosshair, sem eixo duplo (uma metrica por grafico).
+
+    mostrar_gasto/mostrar_conversoes controlam quais metricas entram no grafico - o
+    controle de verdade fica nos toggles do Streamlit acima do grafico (que tambem
+    escondem os cartoes de KPI correspondentes), nao numa legenda so local daqui."""
     p = get_palette(theme)
+
+    if not mostrar_gasto and not mostrar_conversoes:
+        return f"""
+        {_frame_reset()}
+        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+                    color:{p['muted']};font-size:13px;font-family:sans-serif;">
+            Nenhuma métrica selecionada — ative Gasto ou Conversões acima
+        </div>
+        """
+
+    altura_gasto = "65%" if (mostrar_gasto and mostrar_conversoes) else "100%"
+    altura_conv = "35%" if (mostrar_gasto and mostrar_conversoes) else "100%"
 
     return f"""
     {_frame_reset()}
     <div id="wrap-trend" style="width:100%;height:100%;display:flex;flex-direction:column;">
-      <div id="chart-gasto" style="width:100%;flex:0 0 65%;"></div>
-      <div id="chart-conv" style="width:100%;flex:0 0 35%;"></div>
+      {'<div id="chart-gasto" style="width:100%;flex:0 0 ' + altura_gasto + ';"></div>' if mostrar_gasto else ''}
+      {'<div id="chart-conv" style="width:100%;flex:0 0 ' + altura_conv + ';"></div>' if mostrar_conversoes else ''}
     </div>
     <script src="{ECHARTS_CDN}"></script>
     <script>
@@ -29,22 +52,19 @@ def trend_and_conversions(dates: list[str], gasto: list[float], conversoes: list
       const gasto = {json.dumps(gasto)};
       const conv = {json.dumps(conversoes)};
       const p = {json.dumps(p)};
+      const mostrarGasto = {json.dumps(mostrar_gasto)};
+      const mostrarConversoes = {json.dumps(mostrar_conversoes)};
 
       const gastoDom = document.getElementById('chart-gasto');
       const convDom = document.getElementById('chart-conv');
-      const gastoChart = echarts.init(gastoDom, null, {{ renderer: 'svg' }});
-      const convChart = echarts.init(convDom, null, {{ renderer: 'svg' }});
+      const gastoChart = gastoDom ? echarts.init(gastoDom, null, {{ renderer: 'svg' }}) : null;
+      const convChart = convDom ? echarts.init(convDom, null, {{ renderer: 'svg' }}) : null;
 
       const gastoOption = {{
         backgroundColor: 'transparent',
         animationDuration: 1400,
         animationEasing: 'cubicOut',
-        legend: {{
-          show: true, top: 0, right: 4, itemWidth: 14, itemHeight: 3, icon: 'roundRect',
-          textStyle: {{ color: p.text_secondary, fontSize: 12 }},
-          inactiveColor: p.muted
-        }},
-        grid: {{ left: 56, right: 20, top: 32, bottom: 6, containLabel: false }},
+        grid: {{ left: 56, right: 20, top: 12, bottom: 6, containLabel: false }},
         tooltip: {{
           trigger: 'axis',
           backgroundColor: p.surface_2,
@@ -90,12 +110,7 @@ def trend_and_conversions(dates: list[str], gasto: list[float], conversoes: list
         animationDuration: 1400,
         animationDelay: 200,
         animationEasing: 'cubicOut',
-        legend: {{
-          show: true, top: 0, right: 4, itemWidth: 14, itemHeight: 3, icon: 'roundRect',
-          textStyle: {{ color: p.text_secondary, fontSize: 12 }},
-          inactiveColor: p.muted
-        }},
-        grid: {{ left: 56, right: 20, top: 18, bottom: 22, containLabel: false }},
+        grid: {{ left: 56, right: 20, top: 10, bottom: 22, containLabel: false }},
         tooltip: {{
           trigger: 'axis',
           backgroundColor: p.surface_2,
@@ -130,13 +145,13 @@ def trend_and_conversions(dates: list[str], gasto: list[float], conversoes: list
         }}]
       }};
 
-      gastoChart.setOption(gastoOption);
-      convChart.setOption(convOption);
-      echarts.connect([gastoChart, convChart]);
+      if (gastoChart) gastoChart.setOption(gastoOption);
+      if (convChart) convChart.setOption(convOption);
+      if (gastoChart && convChart) echarts.connect([gastoChart, convChart]);
 
       window.addEventListener('resize', function() {{
-        gastoChart.resize();
-        convChart.resize();
+        if (gastoChart) gastoChart.resize();
+        if (convChart) convChart.resize();
       }});
     }})();
     </script>

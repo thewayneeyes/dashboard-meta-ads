@@ -545,13 +545,20 @@ def main():
 
     cpa = gasto_total / conversoes_total if conversoes_total else 0
 
-    render_kpis([
-        ("Alcance", formatar_numero(alcance_total)),
-        ("Impressões", formatar_numero(impressoes_total)),
-        ("Gasto Total", formatar_moeda(gasto_total)),
-        ("Conversões", formatar_numero(conversoes_total)),
-        ("Custo por Resultado", formatar_moeda(cpa)),
-    ])
+    # controles de "o que considerar" no painel - desmarcar Gasto ou Conversoes tira
+    # aquele cartao de KPI e a linha correspondente do grafico de Tendencia; marcar de
+    # novo traz tudo de volta (nada e recalculado nem perdido, so escondido)
+    mostrar_gasto = st.session_state.get("toggle_gasto", True)
+    mostrar_conversoes = st.session_state.get("toggle_conversoes", True)
+
+    kpis = [("Alcance", formatar_numero(alcance_total)), ("Impressões", formatar_numero(impressoes_total))]
+    if mostrar_gasto:
+        kpis.append(("Gasto Total", formatar_moeda(gasto_total)))
+    if mostrar_conversoes:
+        kpis.append(("Conversões", formatar_numero(conversoes_total)))
+    if mostrar_gasto and mostrar_conversoes:
+        kpis.append(("Custo por Resultado", formatar_moeda(cpa)))
+    render_kpis(kpis)
 
     diario = df.groupby("data", as_index=False).agg(gasto=("gasto", "sum"), conversoes=("conversoes", "sum"))
     datas_fmt = diario["data"].dt.strftime("%d/%m").tolist()
@@ -565,9 +572,21 @@ def main():
     )
 
     with tab_tendencia:
-        chart_shell_start("Gasto e Conversões", "Evolução diária — passe o mouse para comparar")
+        chart_shell_start("Gasto e Conversões", "Evolução diária — desmarque uma métrica pra tirá-la do painel inteiro")
+        col_tg1, col_tg2, _ = st.columns([1, 1.4, 5])
+        with col_tg1:
+            mostrar_gasto = st.toggle("Gasto", value=mostrar_gasto, key="toggle_gasto")
+        with col_tg2:
+            mostrar_conversoes = st.toggle("Conversões", value=mostrar_conversoes, key="toggle_conversoes")
         components.html(
-            trend_and_conversions(datas_fmt, diario["gasto"].round(2).tolist(), diario["conversoes"].tolist(), theme),
+            trend_and_conversions(
+                datas_fmt,
+                diario["gasto"].round(2).tolist(),
+                diario["conversoes"].tolist(),
+                theme,
+                mostrar_gasto,
+                mostrar_conversoes,
+            ),
             height=352,
         )
         chart_shell_end()
