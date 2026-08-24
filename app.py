@@ -187,7 +187,7 @@ def tabela_campanhas(df: pd.DataFrame, alcance_exato: dict | None = None) -> pd.
         ["campanha", "status", "gasto", "impressoes", "alcance", "frequencia", "cliques", "conversoes", "ctr", "cpc", "cpa"]
     ]
     fmt.columns = [
-        "Campanha", "Status", "Gasto", "Impressões", "Alcance", "Frequência", "Cliques", "Conversões", "CTR", "CPC", "CPA",
+        "Campanha", "Status", "Gasto", "Impressões", "Alcance", "Frequência", "Cliques", "Resultados", "CTR", "CPC", "CPA",
     ]
     return fmt
 
@@ -557,40 +557,56 @@ def main():
         status_por_nome = {}
 
     if conta_travada:
+        # link do cliente final: tanto Status quanto Campanhas foram decisoes explicitas
+        # da agencia na hora de gerar o link, entao os dois valem juntos aqui
         campanhas_ocultas = campanhas_ocultas_da_url() & set(todas_campanhas)
+        campanha_ativa = df["status"] == "Ativo"
+        mostrar_status = pd.Series(False, index=df.index)
+        if "Ativas" in status_selecionados:
+            mostrar_status |= campanha_ativa
+        if "Desativadas" in status_selecionados:
+            mostrar_status |= ~campanha_ativa
+        df = df[mostrar_status & ~df["campanha"].isin(campanhas_ocultas)]
     else:
         chave_estado = f"campanhas_ocultas_{ad_account_id}"
-        anteriores = {c for c in st.session_state.get(chave_estado, set()) if c in todas_campanhas}
+        if chave_estado not in st.session_state:
+            # primeira vez vendo essa conta: usa o filtro de Status so como sugestao
+            # inicial de quais campanhas comecam desmarcadas (pausadas ficam ocultas se
+            # "Desativadas" nao estiver marcado ali em cima). Dali em diante, o
+            # checkbox de cada campanha manda sozinho - marcado sempre aparece no
+            # painel, desmarcado sempre fica oculto, sem o Status voltar a interferir.
+            st.session_state[chave_estado] = {
+                nome
+                for nome in todas_campanhas
+                if not (
+                    (status_por_nome.get(nome) == "Ativo" and "Ativas" in status_selecionados)
+                    or (status_por_nome.get(nome) != "Ativo" and "Desativadas" in status_selecionados)
+                )
+            }
+        anteriores = {c for c in st.session_state[chave_estado] if c in todas_campanhas}
         rotulo = f"Campanhas ({len(anteriores)} ocultas)" if anteriores else "Campanhas"
         col_camp, _ = st.columns([1.4, 6])
         with col_camp:
             with st.popover(rotulo, use_container_width=True):
                 st.caption(
-                    "Todo o histórico de campanhas da conta está aqui, marcadas por "
-                    "padrão (mesmo sem gasto recente). Desmarque as que não devem "
-                    "aparecer no painel — KPIs, gráficos, tabela e no link do cliente."
+                    "Todo o histórico de campanhas da conta está aqui. Marcada = "
+                    "aparece no painel (KPIs, gráficos, tabela e no link do cliente). "
+                    "Desmarcada = fica oculta."
                 )
                 campanhas_ocultas = set()
                 for nome in todas_campanhas:
                     status_camp = status_por_nome.get(nome)
-                    rotulo_camp = f"{nome} · {status_camp}" if status_camp and status_camp != "Ativo" else nome
+                    rotulo_camp = f"{nome}  `{status_camp}`" if status_camp and status_camp != "Ativo" else nome
                     if not st.checkbox(
                         rotulo_camp, value=nome not in anteriores, key=f"camp_{chave_estado}_{nome}"
                     ):
                         campanhas_ocultas.add(nome)
         st.session_state[chave_estado] = campanhas_ocultas
 
-    # filtro de status (Ativas/Desativadas) escolhido na barra de controles - ou fixo
-    # vindo da URL quando e o link travado de um cliente final. Aplica igual em tudo
-    # (tabela, graficos, totais) pra ficar tudo consistente entre si.
-    campanha_ativa = df["status"] == "Ativo"
-    mostrar_status = pd.Series(False, index=df.index)
-    if "Ativas" in status_selecionados:
-        mostrar_status |= campanha_ativa
-    if "Desativadas" in status_selecionados:
-        mostrar_status |= ~campanha_ativa
+        # so o checkbox de cada campanha decide - o filtro de Status ja foi usado la em
+        # cima so pra sugerir o ponto de partida, nao volta a esconder nada aqui
+        df = df[~df["campanha"].isin(campanhas_ocultas)]
 
-    df = df[mostrar_status & ~df["campanha"].isin(campanhas_ocultas)]
     if df.empty:
         st.warning(
             f"Nenhuma campanha corresponde aos filtros selecionados — {total_campanhas_periodo} "
@@ -641,7 +657,7 @@ def main():
         ("Alcance", formatar_numero(alcance_total)),
         ("Impressões", formatar_numero(impressoes_total)),
         ("Gasto Total", formatar_moeda(gasto_total)),
-        ("Conversões", formatar_numero(conversoes_total)),
+        ("Resultados", formatar_numero(conversoes_total)),
         ("Custo por Resultado", formatar_moeda(cpa)),
     ])
 
@@ -657,7 +673,7 @@ def main():
     )
 
     with tab_tendencia:
-        chart_shell_start("Gasto e Conversões", "Evolução diária — passe o mouse para comparar")
+        chart_shell_start("Gasto e Resultados", "Evolução diária — passe o mouse para comparar")
         components.html(
             trend_and_conversions(datas_fmt, diario["gasto"].round(2).tolist(), diario["conversoes"].tolist(), theme),
             height=352,

@@ -549,6 +549,18 @@ def global_css(theme: str) -> str:
         font-size: 12px !important;
         font-weight: 700 !important;
     }}
+    /* badge de status ao lado do nome da campanha (ex: "Pausado") - o codigo inline
+       markdown vem com fundo escuro fixo por padrao, ilegivel em cima do texto escuro
+       do tema claro */
+    [data-testid="stPopoverBody"] code {{
+        background: {p['surface']} !important;
+        color: {p['text_secondary']} !important;
+        border: 1px solid {p['border_strong']} !important;
+        border-radius: 6px !important;
+        padding: 1px 7px !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+    }}
     [data-testid="stPopoverBody"] input {{
         background: {p['surface']} !important;
         border-color: {p['border_strong']} !important;

@@ -32,7 +32,7 @@ def trend_and_conversions(
         {_frame_reset()}
         <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;
                     color:{p['muted']};font-size:13px;font-family:sans-serif;">
-            Nenhuma métrica selecionada — ative Gasto ou Conversões acima
+            Nenhuma métrica selecionada — ative Gasto ou Resultados acima
         </div>
         """
 
@@ -131,7 +131,7 @@ def trend_and_conversions(
           splitLine: {{ lineStyle: {{ color: p.gridline }} }}
         }},
         series: [{{
-          name: 'Conversões',
+          name: 'Resultados',
           type: 'bar',
           data: conv,
           barMaxWidth: 14,
@@ -168,7 +168,7 @@ def funnel_chart(impressoes: int, alcance: int, cliques: int, conversoes: int, t
         {"name": "Impressões", "value": impressoes},
         {"name": "Alcance", "value": alcance},
         {"name": "Cliques", "value": cliques},
-        {"name": "Conversões", "value": conversoes},
+        {"name": "Resultados", "value": conversoes},
     ]
 
     return f"""
