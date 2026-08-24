@@ -523,25 +523,12 @@ def main():
         df = gerar_dados_diarios(pd.Timestamp(data_ini), pd.Timestamp(data_fim))
         fonte = "Dados de <b>demonstração</b>"
 
-    # filtro de status (Ativas/Desativadas) escolhido na barra de controles - ou fixo
-    # vindo da URL quando e o link travado de um cliente final. Aplica igual em tudo
-    # (tabela, graficos, totais) pra ficar tudo consistente entre si.
     total_campanhas_periodo = df["campanha"].nunique()
-    campanha_ativa = df["status"] == "Ativo"
-    mostrar = pd.Series(False, index=df.index)
-    if "Ativas" in status_selecionados:
-        mostrar |= campanha_ativa
-    if "Desativadas" in status_selecionados:
-        mostrar |= ~campanha_ativa
-    df = df[mostrar]
-    if df.empty:
-        st.warning(
-            f"Nenhuma campanha corresponde ao filtro de status selecionado — {total_campanhas_periodo} "
-            "campanha(s) teve(veram) veiculação no período."
-        )
-        st.stop()
 
-    # filtro de campanhas especificas - a agencia tira campanhas pontuais (teste, sem
+    # filtro de campanhas especificas - a lista mostra TODA campanha que teve veiculacao
+    # no periodo, independente de estar ativa ou pausada agora (calculado a partir do df
+    # cru, antes do filtro de Status abaixo - senao uma campanha pausada nem aparecia
+    # aqui pra agencia poder escolher). A agencia tira campanhas pontuais (teste, sem
     # relevancia pro cliente, etc) de TUDO no painel (KPIs, graficos, tabela). Fica
     # travado no link do cliente final: a agencia decide o que ele ve, sem controle
     # nenhum do lado dele.
@@ -556,9 +543,9 @@ def main():
         with col_camp:
             with st.popover(rotulo, use_container_width=True):
                 st.caption(
-                    "Todas as campanhas do cliente estão aqui, marcadas por padrão. "
-                    "Desmarque as que não devem aparecer no painel — KPIs, gráficos, "
-                    "tabela e no link que for gerado pra esse cliente."
+                    "Todas as campanhas com veiculação no período estão aqui, marcadas "
+                    "por padrão (mesmo as pausadas). Desmarque as que não devem aparecer "
+                    "no painel — KPIs, gráficos, tabela e no link gerado pra esse cliente."
                 )
                 campanhas_ocultas = {
                     nome
@@ -567,11 +554,23 @@ def main():
                 }
         st.session_state[chave_estado] = campanhas_ocultas
 
-    if campanhas_ocultas:
-        df = df[~df["campanha"].isin(campanhas_ocultas)]
-        if df.empty:
-            st.warning("Todas as campanhas do período foram ocultadas no filtro de Campanhas.")
-            st.stop()
+    # filtro de status (Ativas/Desativadas) escolhido na barra de controles - ou fixo
+    # vindo da URL quando e o link travado de um cliente final. Aplica igual em tudo
+    # (tabela, graficos, totais) pra ficar tudo consistente entre si.
+    campanha_ativa = df["status"] == "Ativo"
+    mostrar_status = pd.Series(False, index=df.index)
+    if "Ativas" in status_selecionados:
+        mostrar_status |= campanha_ativa
+    if "Desativadas" in status_selecionados:
+        mostrar_status |= ~campanha_ativa
+
+    df = df[mostrar_status & ~df["campanha"].isin(campanhas_ocultas)]
+    if df.empty:
+        st.warning(
+            f"Nenhuma campanha corresponde aos filtros selecionados — {total_campanhas_periodo} "
+            "campanha(s) teve(veram) veiculação no período."
+        )
+        st.stop()
 
     if alcance_exato:
         # a consulta de alcance exato busca TODAS as campanhas (antes dos filtros acima)
