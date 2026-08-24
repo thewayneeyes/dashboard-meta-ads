@@ -550,19 +550,21 @@ def main():
         campanhas_ocultas = campanhas_ocultas_da_url() & set(todas_campanhas)
     else:
         chave_estado = f"campanhas_ocultas_{ad_account_id}"
-        anteriores = [c for c in st.session_state.get(chave_estado, set()) if c in todas_campanhas]
+        anteriores = {c for c in st.session_state.get(chave_estado, set()) if c in todas_campanhas}
         rotulo = f"Campanhas ({len(anteriores)} ocultas)" if anteriores else "Campanhas"
         col_camp, _ = st.columns([1.4, 6])
         with col_camp:
             with st.popover(rotulo, use_container_width=True):
                 st.caption(
-                    "Campanhas marcadas aqui saem de tudo no painel — KPIs, gráficos e "
-                    "tabela — inclusive do link que for gerado pra esse cliente."
+                    "Todas as campanhas do cliente estão aqui, marcadas por padrão. "
+                    "Desmarque as que não devem aparecer no painel — KPIs, gráficos, "
+                    "tabela e no link que for gerado pra esse cliente."
                 )
-                selecao = st.multiselect(
-                    "Ocultar estas campanhas", todas_campanhas, default=anteriores, key=f"ms_{chave_estado}"
-                )
-        campanhas_ocultas = set(selecao)
+                campanhas_ocultas = {
+                    nome
+                    for nome in todas_campanhas
+                    if not st.checkbox(nome, value=nome not in anteriores, key=f"camp_{chave_estado}_{nome}")
+                }
         st.session_state[chave_estado] = campanhas_ocultas
 
     if campanhas_ocultas:
