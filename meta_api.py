@@ -15,17 +15,20 @@ FIELDS = (
 # "Veiculacao" no Gerenciador de Anuncios = effective_status da campanha. So existe no
 # endpoint de campanhas (/campaigns), nao no de insights - por isso precisa de uma
 # segunda consulta separada, unida pelo campaign_id.
+# Termos identicos aos que a coluna "Veiculacao" mostra no Gerenciador de Anuncios em
+# PT-BR - pedido explicito do cliente pra nao inventar rotulo proprio (ex: nao usar
+# "Pausado" e sim "Desativado", que e a palavra que a Meta usa).
 STATUS_PT = {
     "ACTIVE": "Ativo",
-    "PAUSED": "Pausado",
-    "CAMPAIGN_PAUSED": "Pausado",
-    "ADSET_PAUSED": "Pausado",
+    "PAUSED": "Desativado",
+    "CAMPAIGN_PAUSED": "Desativado",
+    "ADSET_PAUSED": "Desativado",
     "IN_PROCESS": "Em processamento",
-    "WITH_ISSUES": "Com problema",
-    "PENDING_REVIEW": "Em revisão",
+    "WITH_ISSUES": "Erro no pagamento",
+    "PENDING_REVIEW": "Em análise",
     "DISAPPROVED": "Reprovado",
     "PREAPPROVED": "Pré-aprovado",
-    "PENDING_BILLING_INFO": "Pendente de cobrança",
+    "PENDING_BILLING_INFO": "Erro no pagamento",
     "ARCHIVED": "Arquivada",
     "DELETED": "Excluída",
 }
