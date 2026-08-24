@@ -529,6 +529,10 @@ def main():
         fonte = "Dados de <b>demonstração</b>"
 
     total_campanhas_periodo = df["campanha"].nunique()
+    # campanhas que realmente tem alguma linha de dado neste periodo - usado so pra
+    # avisar quais marcacoes do filtro de Campanhas de fato mudam algo na tabela (uma
+    # campanha antiga sem gasto no periodo nao aparece mesmo que esteja marcada)
+    campanhas_com_dados_periodo = set(df["campanha"].unique())
 
     # filtro de campanhas especificas - a lista mostra TODA campanha que ja existiu na
     # conta (catalogo completo, direto do endpoint de campanhas), nao so as que tiveram
@@ -584,23 +588,40 @@ def main():
                 )
             }
         anteriores = {c for c in st.session_state[chave_estado] if c in todas_campanhas}
-        rotulo = f"Campanhas ({len(anteriores)} ocultas)" if anteriores else "Campanhas"
+        # o numero no botao conta so o que de fato muda a tabela (ocultas dentre as que
+        # tem dado neste periodo) - senao o numero nao batia com o que a agencia via
+        # aparecer/sumir na tabela, ja que a lista completa inclui campanhas antigas
+        # sem nenhum dado no periodo (marcar ou desmarcar essas nao muda nada agora)
+        ocultas_relevantes = anteriores & campanhas_com_dados_periodo
+        rotulo = f"Campanhas ({len(ocultas_relevantes)} ocultas)" if ocultas_relevantes else "Campanhas"
         col_camp, _ = st.columns([1.4, 6])
         with col_camp:
             with st.popover(rotulo, use_container_width=True):
                 st.caption(
-                    "Todo o histórico de campanhas da conta está aqui. Marcada = "
-                    "aparece no painel (KPIs, gráficos, tabela e no link do cliente). "
-                    "Desmarcada = fica oculta."
+                    "Marcada = aparece no painel (KPIs, gráficos, tabela e no link do "
+                    "cliente). Desmarcada = fica oculta."
                 )
+                campanhas_neste_periodo = [c for c in todas_campanhas if c in campanhas_com_dados_periodo]
+                campanhas_sem_dado = [c for c in todas_campanhas if c not in campanhas_com_dados_periodo]
+
                 campanhas_ocultas = set()
-                for nome in todas_campanhas:
+
+                def _linha_campanha(nome: str):
                     status_camp = status_por_nome.get(nome)
                     rotulo_camp = f"{nome}  `{status_camp}`" if status_camp and status_camp != "Ativo" else nome
-                    if not st.checkbox(
-                        rotulo_camp, value=nome not in anteriores, key=f"camp_{chave_estado}_{nome}"
-                    ):
+                    if not st.checkbox(rotulo_camp, value=nome not in anteriores, key=f"camp_{chave_estado}_{nome}"):
                         campanhas_ocultas.add(nome)
+
+                if campanhas_neste_periodo:
+                    st.markdown(f"**Com dado neste período ({len(campanhas_neste_periodo)})**")
+                    for nome in campanhas_neste_periodo:
+                        _linha_campanha(nome)
+
+                if campanhas_sem_dado:
+                    with st.expander(f"Sem dado neste período ({len(campanhas_sem_dado)})"):
+                        st.caption("Marcar aqui não muda a tabela agora — só entra em vigor se essa campanha voltar a ter veiculação no período escolhido.")
+                        for nome in campanhas_sem_dado:
+                            _linha_campanha(nome)
         st.session_state[chave_estado] = campanhas_ocultas
 
         # so o checkbox de cada campanha decide - o filtro de Status ja foi usado la em
