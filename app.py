@@ -7,7 +7,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from charts import campaign_bar_chart, funnel_chart, trend_and_conversions
-from meta_api import MetaAPIError, buscar_alcance_exato, buscar_insights, listar_contas
+from meta_api import MetaAPIError, buscar_alcance_exato, buscar_insights, listar_campanhas, listar_contas
 from mock_data import gerar_dados_diarios
 from theme import get_palette, global_css
 
@@ -199,6 +199,11 @@ def token_salvo() -> str:
 @st.cache_data(ttl=300, show_spinner=False)
 def _contas_cache(token: str):
     return listar_contas(token)
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def _campanhas_cache(ad_account_id: str, token: str):
+    return listar_campanhas(ad_account_id, token)
 
 
 CLIENT_VIEW_PARAM = "cliente"
@@ -525,14 +530,32 @@ def main():
 
     total_campanhas_periodo = df["campanha"].nunique()
 
-    # filtro de campanhas especificas - a lista mostra TODA campanha que teve veiculacao
-    # no periodo, independente de estar ativa ou pausada agora (calculado a partir do df
-    # cru, antes do filtro de Status abaixo - senao uma campanha pausada nem aparecia
-    # aqui pra agencia poder escolher). A agencia tira campanhas pontuais (teste, sem
-    # relevancia pro cliente, etc) de TUDO no painel (KPIs, graficos, tabela). Fica
-    # travado no link do cliente final: a agencia decide o que ele ve, sem controle
-    # nenhum do lado dele.
-    todas_campanhas = sorted(df["campanha"].unique())
+    # filtro de campanhas especificas - a lista mostra TODA campanha que ja existiu na
+    # conta (catalogo completo, direto do endpoint de campanhas), nao so as que tiveram
+    # gasto no periodo selecionado - senao uma campanha pausada ha tempos nem aparecia
+    # pra agencia poder decidir na mao se mostra ou nao pro cliente. A agencia tira
+    # campanhas de TUDO no painel (KPIs, graficos, tabela). Fica travado no link do
+    # cliente final: a agencia decide o que ele ve, sem controle nenhum do lado dele.
+    if modo == "Conta real (Meta API)" and ad_account_id and access_token:
+        try:
+            catalogo = _campanhas_cache(ad_account_id, access_token)
+            # duas campanhas podem ter o MESMO nome (ex: uma antiga pausada e uma nova
+            # ativa reaproveitando o nome) - o filtro so enxerga nome (o df de insights
+            # nao carrega o id da campanha ate a tabela final), entao agrupa por nome
+            # aqui; se qualquer uma das duplicatas estiver ativa, mostra como "Ativo"
+            status_por_nome: dict[str, str] = {}
+            for c in catalogo:
+                atual = status_por_nome.get(c["nome"])
+                if atual is None or atual != "Ativo":
+                    status_por_nome[c["nome"]] = c["status"]
+            todas_campanhas = sorted(status_por_nome.keys())
+        except MetaAPIError:
+            todas_campanhas = sorted(df["campanha"].unique())
+            status_por_nome = {}
+    else:
+        todas_campanhas = sorted(df["campanha"].unique())
+        status_por_nome = {}
+
     if conta_travada:
         campanhas_ocultas = campanhas_ocultas_da_url() & set(todas_campanhas)
     else:
@@ -543,15 +566,18 @@ def main():
         with col_camp:
             with st.popover(rotulo, use_container_width=True):
                 st.caption(
-                    "Todas as campanhas com veiculação no período estão aqui, marcadas "
-                    "por padrão (mesmo as pausadas). Desmarque as que não devem aparecer "
-                    "no painel — KPIs, gráficos, tabela e no link gerado pra esse cliente."
+                    "Todo o histórico de campanhas da conta está aqui, marcadas por "
+                    "padrão (mesmo sem gasto recente). Desmarque as que não devem "
+                    "aparecer no painel — KPIs, gráficos, tabela e no link do cliente."
                 )
-                campanhas_ocultas = {
-                    nome
-                    for nome in todas_campanhas
-                    if not st.checkbox(nome, value=nome not in anteriores, key=f"camp_{chave_estado}_{nome}")
-                }
+                campanhas_ocultas = set()
+                for nome in todas_campanhas:
+                    status_camp = status_por_nome.get(nome)
+                    rotulo_camp = f"{nome} · {status_camp}" if status_camp and status_camp != "Ativo" else nome
+                    if not st.checkbox(
+                        rotulo_camp, value=nome not in anteriores, key=f"camp_{chave_estado}_{nome}"
+                    ):
+                        campanhas_ocultas.add(nome)
         st.session_state[chave_estado] = campanhas_ocultas
 
     # filtro de status (Ativas/Desativadas) escolhido na barra de controles - ou fixo

@@ -224,6 +224,44 @@ def buscar_insights(ad_account_id: str, access_token: str, data_inicio: str, dat
     ]
 
 
+def listar_campanhas(ad_account_id: str, access_token: str) -> list[dict]:
+    """Todas as campanhas que ja existiram na conta, com nome e status - independente de
+    ter tido gasto no periodo selecionado. Usado no filtro de Campanhas: a agencia
+    precisa ver (e poder excluir) uma campanha pausada ha tempos, nao so as que tiveram
+    atividade recente (essas o /insights ja nem devolve)."""
+    if not ad_account_id.startswith("act_"):
+        ad_account_id = f"act_{ad_account_id}"
+
+    url = f"{BASE_URL}/{ad_account_id}/campaigns"
+    params = {"fields": "id,name,effective_status", "access_token": access_token, "limit": 500}
+
+    campanhas = []
+    while url:
+        try:
+            resp = _session.get(url, params=params, timeout=30)
+        except requests.exceptions.RequestException as e:
+            raise MetaAPIError(
+                "Não foi possível conectar à Meta API (falha de rede). Tente novamente em alguns segundos."
+            ) from e
+        payload = resp.json()
+        if "error" in payload:
+            raise MetaAPIError(payload["error"].get("message", "Erro ao listar campanhas"))
+        for row in payload.get("data", []):
+            status_bruto = row.get("effective_status", "")
+            campanhas.append(
+                {
+                    "id": row.get("id"),
+                    "nome": row.get("name", ""),
+                    "status": STATUS_PT.get(status_bruto, status_bruto.title() or "Desconhecido"),
+                }
+            )
+        url = payload.get("paging", {}).get("next")
+        params = None
+
+    campanhas.sort(key=lambda c: (c["status"] != "Ativo", c["nome"].lower()))
+    return campanhas
+
+
 def buscar_status_campanhas(ad_account_id: str, access_token: str) -> dict:
     """Status de veiculacao (ativa, pausada, em revisao, etc) de cada campanha da conta -
     campo que so existe no endpoint de campanhas, nao no de insights."""
